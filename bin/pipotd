@@ -1,0 +1,27 @@
+#!/bin/bash
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+PIDFILE="${DIR}/pipotd.pid"
+PIDFILE2="${DIR}/gunicorn.pid"
+
+cmd=$1
+
+function usage() {
+    echo -e "\n  PiPot Micro Honeypot Daemon\n"
+    echo -e "\tpipotd [ --start | --dev | --stop | --help ]\n\n"
+    echo -e "\t\t--start\tStarts the pipotd processes"
+    echo -e "\t\t--stop\tStops the pipotd processes"
+    echo -e "\t\t--help\tThis help\n"
+}
+
+if [ "${cmd}" == "--start" ]; then
+    twistd -y "${DIR}/pipot.tac" --pidfile "${PIDFILE}" --syslog --prefix=pipotd
+    python "${DIR}/bootstrap_gunicorn.py" "${DIR}/../" "${PIDFILE2}"
+elif [ "${cmd}" == "--stop" ]; then
+    pid=`cat "${PIDFILE}"`
+    kill "$pid"
+    pid=`cat "${PIDFILE2}"`
+    kill "$pid"
+else
+    usage
+    exit 1
+fi

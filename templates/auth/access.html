@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}{{ super() }}Manage roles and access rights{% endblock %}
+{% block head %}
+    {{ super() }}
+    <script type="text/javascript" src="{{ url_for('static', filename='js/sorttable.js') }}"></script>
+{% endblock %}
+{% block body %}
+    {{ super() }}
+    <br>
+    <div class="row">
+        <h1>Manage roles and access rights</h1>
+        <p>The table below contains an overview of the available roles for this instance and the level of access they give to the instance. Admins have access to everything.</p>
+    </div>
+    <div class="row">
+        <table class="stack hover sortable" id="pageTable">
+            <thead>
+                <tr>
+                    <th>Page</th>
+                    {% for role in roles %}
+                    <th class="sorttable_nosort">{{ role.name }} <i class="fa fa-remove" title="Delete role" onclick="confirmDeleteRole('{{ role.name }}', {{ role.id }});"></i></th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+            {% for page in pages %}
+                <tr>
+                    <td>{{ page.pretty_name }}</td>
+                    {% for role in roles %}
+                        <td>
+                            <fieldset class="auth_access_fieldset">
+                                <input
+                                    type="checkbox"
+                                    {% if role in page.roles %}checked="checked"{% endif %}
+                                    id="pageAccess_{{ page.id }}_{{ role.id }}"
+                                    class="hideCheckbox"
+                                    onchange="changeAccessRight(this);"
+                                    data-role-id="{{ role.id }}"
+                                    data-page-id="{{ page.id }}"
+                                />
+                                <label for="pageAccess_{{ page.id }}_{{ role.id }}"><span></span></label>
+                            </fieldset>
+                            <span class="auth_access_ajax"></span>
+                        </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="row">
+        <h2>Add a new role</h2>
+        <form name="userForm" id="userForm" method="post">
+            {{ form.csrf_token }}
+            {% if form.errors %}
+            <div>
+                {% for field, error in form.errors.items() %}
+                    {% for e in error %}
+                        {{ e }}<br>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+            {% endif %}
+            {{ macros.render_field(form.name) }}
+            {{ macros.render_field(form.submit) }}
+        </form>
+    </div>
+    <div id="roleDelete" class="large reveal" data-reveal>
+        <h1>Please confirm</h1>
+        <p>Are you sure you want to delete <span id="roleDeleteName"></span> (ID: <span id="roleDeleteId"></span>)?</p>
+        <button class="button primary" id="roleDeleteConfirm">Yes, delete role</button>
+        <button class="button secondary" data-close>No, do not delete role</button>
+        <p id="roleDeleteAjax"></p>
+        <button class="close-button" data-close aria-label="Cancel delete" type="button">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+    <script type="text/javascript">
+        function changeAccessRight(checkbox){
+            checkbox.setAttribute('disabled','disabled');
+            var ajax = $(checkbox.parentNode.nextElementSibling);
+            PiPot.loadHandler.showLoaderInElement(ajax, 'fa-cog',' ');
+            $.ajax({
+                type: "POST",
+                url: "{{ url_for('.access_ajax', action='toggle') }}",
+                data: {
+                    'page': checkbox.getAttribute('data-page-id'),
+                    'role': checkbox.getAttribute('data-role-id'),
+                    'status': checkbox.checked,
+                    'csrf_token': $("#csrf_token").val()
+                },
+                dataType: "json"
+            }).done(function (data) {
+                if (data.status === "success") {
+                    checkbox.removeAttribute('disabled');
+                } else {
+                    PiPot.errorHandler.showErrorInPopup(data.errors, true);
+                }
+            }).fail(function (data) {
+                PiPot.errorHandler.showErrorInPopup(["An unknown error occurred while processing the request (statuscode " + data.status + ")"], true);
+            }).always(function(){
+                ajax.empty();
+            });
+        }
+
+        function confirmDeleteRole(role_name, role_id){
+            $('#roleDeleteAjax').empty();
+            $("#roleDeleteName").html(role_name);
+            $("#roleDeleteId").html(role_id);
+            $("#roleDeleteConfirm").off().on('click', function(){
+                deleteRole(role_id);
+            });
+            $("#roleDelete").foundation('open');
+        }
+
+        function deleteRole(id) {
+            var ajax = $('#roleDeleteAjax');
+            PiPot.loadHandler.showLoaderInElement(ajax);
+            $.ajax({
+                type: "POST",
+                url: "{{ url_for('.access_ajax', action='delete') }}",
+                data: {
+                    'role': id,
+                    'csrf_token': $("#csrf_token").val()
+                },
+                dataType: "json"
+            }).done(function (data) {
+                if (data.status === "success") {
+                    document.location.reload();
+                } else {
+                    PiPot.errorHandler.showErrorInElement(ajax, data.errors, 10000);
+                }
+            }).fail(function (data) {
+                PiPot.errorHandler.showErrorInElement(ajax, ["An unknown error occurred while processing the request (statuscode " + data.status + ")"], 10000);
+            });
+        }
+    </script>
+{% endblock %}

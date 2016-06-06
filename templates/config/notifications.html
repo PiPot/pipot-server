@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}{{ super() }}Notification services management{% endblock %}
+{% block body %}
+    {{ super() }}
+    <div class="callout primary small">
+        <div class="row column">
+            <h1>Notification services management</h1>
+            <p>On this page you can upload, update and delete notification services which will be available for use on this instance.
+                Don't know what is necessary for a notification? <a data-open="howTo">Show a small how-to</a>.</p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="medium-8 columns">
+            <h3>Configured notifications</h3>
+            <table class="stack hover sortable" id="serviceTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th class="sorttable_nosort">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for notification in notifications %}
+                <tr data-id="{{ notification.id }}">
+                    <td>{{ notification.name }}</td>
+                    <td>{{ notification.description }}</td>
+                    <td>
+                        <i class="fa fa-upload" title="Update service code" onclick="confirmUpdateNotification(this);"></i>&nbsp;
+                        <i class="fa fa-pencil" title="Edit description" onclick="confirmNotificationChange(this);"></i>&nbsp;
+                        <i class="fa fa-trash" title="Delete" onclick="confirmDeleteNotification(this);"></i>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="medium-4 columns">
+            <h3>Add new service</h3>
+            <form method="post" action="{{ url_for('.notifications') }}" enctype="multipart/form-data">
+                {% if form.errors %}
+                <div>
+                    {% for field, error in form.errors.items() %}
+                        {% for e in error %}
+                            {{ e }}<br>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {{ form.csrf_token }}
+                {{ macros.render_field(form.file) }}
+                {{ macros.render_field(form.description) }}
+                {{ macros.render_field(form.submit) }}
+            </form>
+        </div>
+    </div>
+    <div id="howTo" class="large reveal" data-reveal>
+        <h1>How to create an interface</h1>
+        <p>You can create an interface in 4 simple steps:</p>
+        <ol>
+            <li>Download the <a href="{{ url_for('.get_interface_file', file='INotification') }}">INotification.py</a> file.</li>
+            <li>Go through the list of required methods and docblocks.</li>
+            <li>Implement a class which inherits from the INotification class.</li>
+            <li>Ensure you import the INotification class as follows:<br /><code>from pipot.notifications.INotification import INotification</code></li>
+            <li>Upload the implemented interface on this page.</li>
+        </ol>
+        <button class="close-button" data-close aria-label="Close" type="button">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    <div id="notificationDelete" class="large reveal" data-reveal>
+        <h1>Please confirm</h1>
+        <p>Are you sure you want to delete <span id="notificationDeleteName"></span>?</p>
+        <button class="button primary" id="notificationDeleteConfirm">Yes, delete service</button>
+        <button class="button secondary" data-close>No, do not delete service</button>
+        <p id="notificationDeleteAjax"></p>
+        <button class="close-button" data-close aria-label="Cancel delete" type="button">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    <div id="notificationChange" class="large reveal" data-reveal>
+        <h1>Change the description</h1>
+        <p>Please enter the new description for <span id="notificationChangeName"></span>:</p>
+        <textarea id="notificationChangeDescription" rows="5"></textarea>
+        <button class="button primary" id="notificationChangeConfirm">Update description</button>
+        <button class="button secondary" data-close>Cancel</button>
+        <p id="notificationChangeAjax"></p>
+        <button class="close-button" data-close aria-label="Cancel" type="button">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    <div id="notificationUpdate" class="large reveal" data-reveal>
+        <h1>Upload a new version</h1>
+        <p>Select and upload a new version for <span id="notificationUpdateName"></span>:</p>
+        <form name="notificationUpdateForm" target="notificationUpdateFrame" enctype="multipart/form-data" method="post" type="multipart" action="{{ url_for('.notifications_ajax',action='update') }}" onsubmit="PiPot.loadHandler.showLoaderInElement($('#notificationUpdateAjax'));">
+            {{ updateform.csrf_token }}
+            {{ macros.render_field(updateform.id) }}
+            {{ macros.render_field(updateform.file) }}
+            <input type="submit" class="button primary" value="Upload new version" />
+            <button class="button secondary" data-close>Cancel</button>
+        </form>
+        <p id="notificationUpdateAjax"></p>
+        <iframe style="display: none;" id="notificationUpdateFrame" name="notificationUpdateFrame"></iframe>
+        <button class="close-button" data-close aria-label="Cancel" type="button">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+    <script type="text/javascript">
+        var frameBound = false;
+        function confirmDeleteNotification(elm){
+            var row = elm.parentNode.parentNode;
+
+            $('#notificationDeleteAjax').empty();
+            $("#notificationDeleteName").html(row.getElementsByTagName('td')[0].innerHTML);
+            $("#notificationDeleteConfirm").off().on('click', function(){
+                deleteService(row);
+            });
+            $("#notificationDelete").foundation('open');
+        }
+        function deleteService(row) {
+            var ajax = $('#notificationDeleteAjax');
+            PiPot.loadHandler.showLoaderInElement(ajax);
+            $.ajax({
+                type: "POST",
+                url: "{{ url_for('.notifications_ajax', action='delete') }}",
+                data: {
+                    'id': row.getAttribute('data-id'),
+                    'csrf_token': $("#csrf_token").val()
+                },
+                dataType: "json"
+            }).done(function (data) {
+                if (data.status === "success") {
+                    row.parentNode.removeChild(row);
+                    $("#notificationDelete").foundation('close');
+                } else {
+                    PiPot.errorHandler.showErrorInElement(ajax, data.errors, 10000);
+                }
+            }).fail(function (data) {
+                PiPot.errorHandler.showErrorInElement(ajax, ["An unknown error occurred while processing the request (statuscode " + data.status + ")"], 10000);
+            });
+        }
+        function confirmNotificationChange(elm){
+            var row = elm.parentNode.parentNode;
+
+            $('#notificationChangeAjax').empty();
+            $("#notificationChangeName").html(row.getElementsByTagName('td')[0].innerHTML);
+            $("#notificationChangeConfirm").off().on('click', function(){
+                notificationChange(row);
+            });
+            $("#notificationChangeDescription").html(row.getElementsByTagName('td')[1].innerHTML);
+            $("#notificationChange").foundation('open');
+        }
+        function notificationChange(row) {
+            var ajax = $('#notificationChangeAjax');
+            PiPot.loadHandler.showLoaderInElement(ajax);
+            $.ajax({
+                type: "POST",
+                url: "{{ url_for('.notifications_ajax', action='change') }}",
+                data: {
+                    'id': row.getAttribute('data-id'),
+                    'description': $("#notificationChangeDescription").val(),
+                    'csrf_token': $("#csrf_token").val()
+                },
+                dataType: "json"
+            }).done(function (data) {
+                if (data.status === "success") {
+                    row.getElementsByTagName('td')[1].innerHTML = data.description;
+                    $("#notificationChange").foundation('close');
+                } else {
+                    PiPot.errorHandler.showErrorInElement(ajax, data.errors, 10000);
+                }
+            }).fail(function (data) {
+                PiPot.errorHandler.showErrorInElement(ajax, ["An unknown error occurred while processing the request (statuscode " + data.status + ")"], 10000);
+            });
+        }
+        function confirmUpdateNotification(elm){
+            var row = elm.parentNode.parentNode;
+            $('#notificationUpdate_id').val(row.getAttribute('data-id'));
+            $('#notificationUpdateAjax').empty();
+            $("#notificationUpdateName").html(row.getElementsByTagName('td')[0].innerHTML);
+
+            if (!frameBound) {
+                $("#notificationUpdateFrame").on('load', updateService).on('error', updateService);
+                frameBound = true;
+            }
+            $("#notificationUpdate").foundation('open');
+        }
+        function updateService() {
+            var ajax, raw, data;
+
+            ajax = $('#notificationUpdateAjax');
+            raw = "";
+            try {
+                raw = frames.notificationUpdateFrame.document.getElementsByTagName("pre")[0].innerHTML;
+                data = JSON.parse(raw);
+            } catch (Error) {
+                PiPot.errorHandler.showErrorInElement(ajax, ['Could not parse the result'], 5000);
+                return;
+            }
+            if (data.status === "success") {
+                PiPot.errorHandler.clearFormErrors('notificationUpdateForm');
+                ajax.show().html('Version successfully updated. You can close this dialog.');
+            } else {
+                PiPot.errorHandler.showFormErrors(ajax, 'notificationUpdateForm', data.errors, 'notificationUpdate_');
+            }
+        }
+    </script>
+{% endblock %}

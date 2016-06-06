@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block title %}{{ super() }}Manage users{% endblock %}
+{% block head %}
+    {{ super() }}
+    <script type="text/javascript" src="{{ url_for('static', filename='js/sorttable.js') }}"></script>
+{% endblock %}
+{% block body %}
+    {{ super() }}
+    <br>
+    <div class="row">
+        <h1>Manage users</h1>
+        <p>Below you can find an overview of all registered users for this instance.</p>
+    </div>
+    <div class="row">
+        <form name="userForm" id="userForm">
+            {{ form.csrf_token }}
+            <table class="stack hover sortable" id="userTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Role</th>
+                        <th>Email</th>
+                        <th class="sorttable_nosort">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for u in users %}
+                    <tr data-user-id="{{ u.id }}">
+                        <td>{{ u.id }}</td>
+                        <td>{{ u.name }}</td>
+                        <td data-role-id="{{ u.role.id }}">{{ u.role.name }}</td>
+                        <td>{{ u.email }}</td>
+                        <td class="user-actions">
+                            <i class="fa fa-trash" title="Delete user" onclick="confirmDeleteUser(this);"></i>
+                            <i class="fa fa-check" title="Change role" onclick="confirmRoleChange(this);"></i>
+                            <i class="fa fa-eraser" title="Reset password" onclick="confirmResetPassword(this);"></i>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td class="hide-for-large">Add new user</td>
+                        <td class="show-for-large"></td>
+                        <td>{{ macros.render_field(form.username, replaceLabelWithPlaceholder=True) }}</td>
+                        <td>{{ macros.render_field(form.role, replaceLabelWithPlaceholder=True) }}</td>
+                        <td>{{ macros.render_field(form.email, placeholder='Email (required only if admin)', replaceLabelWithPlaceholder=True) }}</td>
+                        <td>
+                            <button type="button" class="button" onclick="addUser();"><i class="fa fa-user-plus"></i> Create user</button>
+                            <span id="addUserAjax"></span>
+                            <span class="form-errors" style="display: none;"><i class="fa fa-warning"></i></span>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </form>
+    </div>
+    <div class="invisible">
+        <!-- Templates for edit -->
+        <select id="changeRoleTemplate">
+            {% for r in roles %}
+            <option value="{{ r.id }}">{{ r.value }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="row hide" id="createdUsers">
+        <h2>Created users</h2>
+        <textarea rows="15"></textarea>
+    </div>
+    <div id="userDelete" class="large reveal" data-reveal>
+        <h1>Please confirm</h1>
+        <p>Are you sure you want to delete <span id="userDeleteName"></span> (UID: <span id="userDeleteId"></span>)?</p>
+        <button class="button primary" id="userDeleteConfirm">Yes, delete user</button>
+        <button class="button secondary" data-close>No, do not delete user</button>
+        <p id="userDeleteAjax"></p>
+        <button class="close-button" data-close aria-label="Cancel delete" type="button">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    <div id="userChange" class="large reveal" data-reveal>
+        <h1>Select new role</h1>
+        <p>Please select the new role for <span id="userChangeName"></span> (UID: <span id="userChangeId"></span>):</p>
+        <select id="userChangeRole">
+            {% for r in roles %}
+            <option value="{{ r.id }}">{{ r.name }}</option>
+            {% endfor %}
+        </select>
+        <button class="button primary" id="userChangeConfirm">Update role</button>
+        <button class="button secondary" data-close>Cancel</button>
+        <p id="userChangeAjax"></p>
+        <button class="close-button" data-close aria-label="Cancel" type="button">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    <div id="userPassword" class="large reveal" data-reveal>
+        <h1>Confirm password reset</h1>
+        <p>Please confirm you want to reset the password for <span id="userPasswordName"></span> (UID: <span id="userPasswordId"></span>):</p>
+        <button class="button primary" id="userPasswordConfirm">Reset password</button>
+        <button class="button secondary" data-close>Cancel</button>
+        <p id="userPasswordAjax"></p>
+        <button class="close-button" data-close aria-label="Cancel" type="button">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+    <script type="text/javascript">
+        function setDefaultRole(){
+            $("#role").val('{{ user_role.id }}');
+        }
+        $(document).ready(function () {
+            setDefaultRole();
+            $("#createdUsers").find("textarea").val('Username\tPassword');
+        });
+        function confirmDeleteUser(elm){
+            var row = elm.parentNode.parentNode;
+
+            $('#userDeleteAjax').empty();
+            $("#userDeleteName").html(row.getElementsByTagName('td')[1].innerHTML);
+            $("#userDeleteId").html(row.getAttribute('data-user-id'));
+            $("#userDeleteConfirm").off().on('click', function(){
+                deleteUser(row);
+            });
+            $("#userDelete").foundation('open');
+        }
+        function deleteUser(row) {
+            var ajax = $('#userDeleteAjax');
+            PiPot.loadHandler.showLoaderInElement(ajax);
+            $.ajax({
+                type: "POST",
+                url: "{{ url_for('.users_ajax', action='delete') }}",
+                data: {
+                    'id': row.getAttribute('data-user-id'),
+                    'csrf_token': $("#csrf_token").val()
+                },
+                dataType: "json"
+            }).done(function (data) {
+                if (data.status === "success") {
+                    $("#userDelete").foundation('close');
+                    row.parentNode.removeChild(row);
+                } else {
+                    PiPot.errorHandler.showErrorInElement(ajax, data.errors, 10000);
+                }
+            }).fail(function (data) {
+                PiPot.errorHandler.showErrorInElement(ajax, ["An unknown error occurred while processing the request (statuscode " + data.status + ")"], 10000);
+            });
+        }
+        function confirmRoleChange(elm){
+            var row = elm.parentNode.parentNode;
+
+            $('#userChangeAjax').empty();
+            $("#userChangeName").html(row.getElementsByTagName('td')[1].innerHTML);
+            $("#userChangeId").html(row.getAttribute('data-user-id'));
+            $("#userChangeConfirm").off().on('click', function(){
+                changeRole(row);
+            });
+            $("#userChangeRole").val(row.getElementsByTagName('td')[2].getAttribute('data-role-id'));
+            $("#userChange").foundation('open');
+        }
+        function changeRole(row) {
+            var ajax = $('#userChangeAjax');
+            PiPot.loadHandler.showLoaderInElement(ajax);
+            $.ajax({
+                type: "POST",
+                url: "{{ url_for('.users_ajax', action='change') }}",
+                data: {
+                    'id': row.getAttribute('data-user-id'),
+                    'role': $("#userChangeRole").val(),
+                    'csrf_token': $("#csrf_token").val()
+                },
+                dataType: "json"
+            }).done(function (data) {
+                var cell;
+                if (data.status === "success") {
+                    $("#userChange").foundation('close');
+                    cell = row.getElementsByTagName('td')[2];
+                    cell.setAttribute('data-role-id', data.role.id);
+                    cell.innerHTML = data.role.name;
+                } else {
+                    PiPot.errorHandler.showErrorInElement(ajax, data.errors, 10000);
+                }
+            }).fail(function (data) {
+                PiPot.errorHandler.showErrorInElement(ajax, ["An unknown error occurred while processing the request (statuscode " + data.status + ")"], 10000);
+            });
+        }
+        function confirmResetPassword(elm){
+            var row = elm.parentNode.parentNode;
+
+            $('#userPasswordAjax').empty();
+            $("#userPasswordName").html(row.getElementsByTagName('td')[1].innerHTML);
+            $("#userPasswordId").html(row.getAttribute('data-user-id'));
+            $("#userPasswordConfirm").off().on('click', function(){
+                resetPassword(row.getAttribute('data-user-id'));
+            });
+            $("#userPassword").foundation('open');
+        }
+        function resetPassword(id) {
+            var ajax = $('#userPasswordAjax');
+            PiPot.loadHandler.showLoaderInElement(ajax);
+            $.ajax({
+                type: "POST",
+                url: "{{ url_for('.users_ajax', action='reset') }}",
+                data: {
+                    'id': id,
+                    'csrf_token': $("#csrf_token").val()
+                },
+                dataType: "json"
+            }).done(function (data) {
+                if (data.status === "success") {
+                    ajax.html(data.message);
+                } else {
+                    PiPot.errorHandler.showErrorInElement(ajax, data.errors, 10000);
+                }
+            }).fail(function (data) {
+                PiPot.errorHandler.showErrorInElement(ajax, ["An unknown error occurred while processing the request (statuscode " + data.status + ")"], 10000);
+            });
+        }
+        function addUser() {
+            var ajax = $('#addUserAjax');
+            PiPot.loadHandler.showLoaderInElement(ajax, 'fa-cog', ' ');
+            $.ajax({
+                type: "POST",
+                url: "{{ url_for('.users_ajax', action='create') }}",
+                data: $("#userForm").serialize(),
+                dataType: "json"
+            }).done(function (data) {
+                var row, tbody, cells, created_users;
+                PiPot.errorHandler.clearFormErrors('userForm');
+                if (data.status === "success") {
+                    ajax.html("");
+                    // Add to textarea
+                    $("#createdUsers").removeClass('hide');
+                    created_users = $("#createdUsers").find("textarea");
+                    created_users.val(created_users.val() + "\n" + data.user.name + '\t' + data.user.password);
+                    // Add to table
+                    tbody = $("#userTable").find('tbody');
+                    row = tbody.find('tr').first().clone();
+                    if (row.length === 0) {
+                        row = $('<tr data-user-id="-1"><td></td><td></td><td data-role-id="-1"></td><td></td><td class="user-actions">' +
+                                '<i class="fa fa-trash" title="Delete user" onclick="confirmDeleteUser(this);"></i>' +
+                                '<i class="fa fa-check" title="Change role" onclick="confirmRoleChange(this);"></i>' +
+                                '<i class="fa fa-eraser" title="Reset password" onclick="confirmResetPassword(this);"></i></td></tr>');
+                    }
+                    row.attr('data-user-id', data.user.id);
+                    cells = row.find('td');
+                    cells[0].innerHTML = data.user.id;
+                    cells[1].innerHTML = data.user.name;
+                    cells[2].innerHTML = data.user.role_name;
+                    cells[2].setAttribute('data-role-id', data.user.role_id);
+                    cells[3].innerHTML = data.user.email;
+                    tbody.append(row);
+                    // Reset form
+                    document.forms.userForm.reset();
+                    setDefaultRole();
+                } else {
+                    PiPot.errorHandler.showFormErrors(ajax, 'userForm', data.errors);
+                }
+            }).fail(function (data) {
+                PiPot.errorHandler.showErrorInElement(ajax, ["An unknown error occurred while processing the request (statuscode " + data.status + ")"], 10000);
+            });
+        }
+    </script>
+{% endblock %}

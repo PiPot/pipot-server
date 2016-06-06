@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}{{ super() }}How to process incoming data{% endblock %}
+{% block head %}
+    {{ super() }}
+    <script type="text/javascript" src="{{ url_for('static', filename='js/sorttable.js') }}"></script>
+{% endblock %}
+{% block body %}
+    {{ super() }}
+    <br>
+    <div class="row">
+        <h1>How to process incoming data</h1>
+        <p>Here you can define what {{ applicationNameShort }} should do with incoming data from honyepot instances. By default, all incoming data that does not match any rule, will be stored for reporting.</p>
+    </div>
+    <div class="row">
+        <form name="ruleForm" id="ruleForm" method="post">
+            {{ form.csrf_token }}
+            <table class="stack hover sortable" id="rulesTable">
+                <thead>
+                    <tr>
+                        <th>Service</th>
+                        <th class="sorttable_nosort">Condition</th>
+                        <th class="sorttable_nosort">Level</th>
+                        <th>Notification</th>
+                        <th class="sorttable_nosort">Notification config</th>
+                        <th class="sorttable_nosort">After notification</th>
+                        <th class="sorttable_nosort">&nbsp;</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for rule in rules %}
+                    <tr data-id="{{ rule.id }}">
+                        <td>{{ rule.service.name }}</td>
+                        <td>{{ rule.condition.description }}</td>
+                        <td>{{ rule.level }}</td>
+                        <td>{{ rule.notification.name }}</td>
+                        <td>{{ rule.notification_config }}</td>
+                        <td>{{ rule.action.description }}</td>
+                        <td><i class="fa fa-trash" title="Drop rule" onclick="confirmDeleteService(this);"></i></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td>{{ macros.render_field(form.service_id) }}</td>
+                        <td>{{ macros.render_field(form.condition) }}</td>
+                        <td>{{ macros.render_field(form.level) }}</td>
+                        <td>{{ macros.render_field(form.notification_id) }}</td>
+                        <td>{{ macros.render_field(form.notification_config) }}</td>
+                        <td>{{ macros.render_field(form.action) }}</td>
+                        <td><input type="submit" class="button" value="Add rule" /></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </form>
+    </div>
+    <div id="ruleDelete" class="large reveal" data-reveal>
+        <h1>Delete this rule</h1>
+        <p>Are you sure you want to delete this rule?</p>
+        <button class="button primary" id="deleteConfirm">Yes</button>
+        <button class="button secondary" data-close>No</button>
+        <p id="ruleDeleteAjax"></p>
+        <button class="close-button" data-close aria-label="Cancel" type="button">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+    <script type="text/javascript">
+        function confirmDeleteService (elm) {
+            $("#deleteConfirm").off().on("click", function(){
+                deleteService(elm);
+            });
+            $("#ruleDelete").foundation('open');
+        }
+        function deleteService (elm) {
+            var row, ajax;
+
+            row = elm.parentNode.parentNode;
+            ajax = $('#ruleDeleteAjax');
+            PiPot.loadHandler.showLoaderInElement(ajax);
+            $.ajax({
+                type: "POST",
+                url: "{{ url_for('.data_processing_ajax', action='delete') }}",
+                data: {
+                    'id': row.getAttribute('data-id'),
+                    'csrf_token': $("#csrf_token").val()
+                },
+                dataType: "json"
+            }).done(function (data) {
+                if (data.status === "success") {
+                    row.parentNode.removeChild(row);
+                    $("#ruleDelete").foundation('close');
+                } else {
+                    PiPot.errorHandler.showErrorInElement(ajax, data.errors, 10000);
+                }
+            }).fail(function (data) {
+                PiPot.errorHandler.showErrorInElement(ajax, ["An unknown error occurred while processing the request (statuscode " + data.status + ")"], 10000);
+            });
+        }
+    </script>
+{% endblock %}

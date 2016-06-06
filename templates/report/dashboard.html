@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}{{ super() }}Dashboard for {{ serverName }}{% endblock %}
+{% block body %}
+    {{ super() }}
+    <div class="callout primary">
+        <div class="row column">
+            <h1>Dashboard for {{ serverName }}</h1>
+            <p class="lead">In order to show some reports and data, we need to know which deployment you want to see data about:</p>
+            <form>
+                {{ form.csrf_token }}
+                {% if data|length > 0 %}
+                    <select id="deployment" onchange="onDeploymentChange(this.value);" class="medium-3 columns">
+                        <option value="-1">Select deployment</option>
+                        {% for deployment in data %}
+                            <option value="{{ deployment.id }}">{{ deployment.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <select id="services" class="hide medium-3 columns" onchange="onServiceChange(this.value);"></select>
+                    <select id="report_type" class="hide medium-3 columns" onchange="onReportTypeChanged(this.value);"></select>
+                    <input type="button" id="load_data" class="hide button medium-3 columns" value="Show data" onclick="loadData();" />
+                {% else %}
+                    <p>You do not have any deployed honeypots yet... Time to deploy one?</p>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+    <div class="row">
+        <div class="medium-12 columns" id="reportData"></div>
+    </div>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+    <script type="text/javascript">
+    var deployments = {{ data|tojson|safe }};
+    var deployment = undefined;
+    var service = undefined;
+    var report_type = undefined;
+    function onDeploymentChange(value) {
+        if(value !== "-1") {
+            deployment = deployments.filter(function(elm){ return elm.id === parseInt(value, 10); })[0];
+            if(deployment !== undefined) {
+                // Populate services
+                var services = $("#services");
+                services.empty().append('<option value="-1">Select service</option>');
+                for(var i = 0; i < deployment.services.length; i++) {
+                    services.append($('<option></option>').val(deployment.services[i].id).html(deployment.services[i].name));
+                }
+                document.getElementById("services").classList.remove('hide');
+                return;
+            }
+        }
+        document.getElementById("services").classList.add('hide');
+        document.getElementById("report_type").classList.add('hide');
+        document.getElementById("load_data").classList.add('hide');
+        deployment = undefined;
+        service = undefined;
+        report_type = undefined;
+    }
+    function onServiceChange(value){
+        if(value !== "-1") {
+            if(deployment !== undefined) {
+                // Find service and populate report_types
+                service = deployment.services.filter(function(elm){ return elm.id === parseInt(value, 10); })[0];
+                if (service !== undefined) {
+                    var report_types = $("#report_type");
+                    report_types.empty().append('<option value="-1">Select report type</option>');
+                    for(var i = 0; i < service.report_types.length; i++) {
+                        report_types.append($('<option></option>').val(service.report_types[i]).html(service.report_types[i]));
+                    }
+                    document.getElementById("report_type").classList.remove('hide');
+                    return;
+                }
+            }
+        }
+        document.getElementById("report_type").classList.add('hide');
+        document.getElementById("load_data").classList.add('hide');
+        service = undefined;
+        report_type = undefined;
+    }
+    function onReportTypeChanged(value) {
+        if(value !== "-1"){
+            report_type = value;
+            document.getElementById("load_data").classList.remove('hide');
+            return;
+        }
+        document.getElementById("load_data").classList.add('hide');
+    }
+    function loadData() {
+        var ajax = $('#reportData');
+        PiPot.loadHandler.showLoaderInElement(ajax);
+        $.ajax({
+            type: "POST",
+            url: "{{ url_for('.dashboard_ajax', action='load') }}",
+            data: {
+                'deployment': deployment.id,
+                'service': service.id,
+                'report_type': report_type,
+                'csrf_token': $("#csrf_token").val()
+            },
+            dataType: "json"
+        }).done(function (data) {
+            if (data.status === "success") {
+                ajax.html(data.html).show();
+            } else {
+                PiPot.errorHandler.showErrorInElement(ajax, data.errors, 10000);
+            }
+        }).fail(function (data) {
+            PiPot.errorHandler.showErrorInElement(ajax, ["An unknown error occurred while processing the request (statuscode " + data.status + ")"], 10000);
+        });
+    }
+    $(document).ready(function(){
+        // Reset form
+        var data = $("#deployment").val();
+        if (data !== undefined) {
+            onDeploymentChange(data);
+        }
+    });
+    </script>
+{% endblock %}

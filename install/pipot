@@ -1,0 +1,21 @@
+#!/bin/bash
+# /etc/init.d/pipot
+#
+# Carry out specific functions when asked to by the system
+case "${1}" in
+    start)
+        echo "Starting PiPot daemon..."
+        cd /usr/src/pipot/server
+        bin/pipotd --start
+        ;;
+    stop)
+        echo "Stopping PiPot daemon..."
+        /usr/src/pipot/server/bin/pipotd --stop
+        ;;
+    *)
+        echo "Usage: /etc/init.d/pipot {start|stop}"
+        exit 1
+        ;;
+esac
+
+exit 0

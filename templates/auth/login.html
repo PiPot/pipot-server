@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% set hideMenu = True %}
+{% block title %}Please log in first{% endblock %}
+{% block body %}
+    {{ super() }}
+    <br />
+    <div class="row">
+        <div class="callout warning">
+            <h5>Login required</h5>
+            <p>In order to get access to the functionality of this application, you need to login below.</p>
+        </div>
+    </div>
+    <form method="post" name="loginForm" id="loginForm" action="{{ url_for('auth.login', next=next) }}">
+        {{ form.csrf_token }}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="row">
+                    <div class="callout alert">
+                        <ul class="flashes">
+                            {% for category, message in messages %}
+                            <li class="{{ category }}">{{ message }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            {% endif %}
+        {% endwith %}
+        {% if form.errors %}
+        <div>
+            {% for field, error in form.errors.items() %}
+                {% for e in error %}
+                    {{ e }}<br>
+                {% endfor %}
+            {% endfor %}
+        </div>
+        {% endif %}
+        <div class="row">
+            <div class="medium-6 columns">
+                {{ macros.render_field(form.username) }}
+            </div>
+            <div class="medium-6 columns">
+                {{ macros.render_field(form.password) }}
+            </div>
+            <div class="medium-12 columns">
+                {{ macros.render_field(form.submit) }}
+            </div>
+            <div class="medium-12 columns">
+                <p>Forgot your password? Get in touch with the responsible person for this system. You can reach this person by sending an email to: {{ adminEmail }}</p>
+            </div>
+        </div>
+    </form>
+{% endblock %}

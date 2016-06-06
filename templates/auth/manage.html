@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}{{ super() }}Manage my account{% endblock %}
+{% block menu %}{% include 'menu.html' %}{% endblock %}
+{% block body %}
+    {{ super() }}
+    <br />
+    <div class="row">
+        <h1>Manage my account</h1>
+        <p>On this page you can change your password {% if user.is_admin() %}and email address{% endif %}.</p>
+        <form method="post" name="userForm" id="userForm" action="/">
+            {{ form.csrf_token }}
+            <div class="row">
+                <div class="medium-12 columns">
+                    <div class="alert callout form-errors" style="display: none;">
+                        <p><i class="fi-alert"></i> Not all fields were filled in correctly.</p>
+                    </div>
+                    <h5>Current password</h5>
+                </div>
+                <div class="medium-6 columns">
+                    {{ macros.render_field(form.current_password) }}
+                </div>
+                <div class="medium-12 columns">
+                    <h5>New password</h5>
+                </div>
+                <div class="medium-6 columns">
+                    {{ macros.render_field(form.new_password, helpText='Your password must have at least 10 characters.') }}
+                </div>
+                <div class="medium-6 columns">
+                    {{ macros.render_field(form.new_password_repeat) }}
+                </div>
+                {% if user.is_admin() %}
+                <div class="medium-12 columns">
+                    <h5>Email address</h5>
+                </div>
+                <div class="medium-6 columns">
+                    {{ macros.render_field(form.email) }}
+                </div>
+                {% endif %}
+                <div class="medium-12 columns">
+                    <input type="button" class="button" value="Save changes" onclick="submitForm();"> <span id="ajaxStatus"></span>
+                </div>
+            </div>
+        </form>
+    </div>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+    <script type="text/javascript">
+        function submitForm() {
+            var ajax = $('#ajaxStatus');
+            PiPot.loadHandler.showLoaderInElement(ajax);
+            $.ajax({
+                type: "POST",
+                url: "{{ url_for('.manage') }}",
+                data: $("#userForm").serialize(),
+                dataType: "json"
+            }).done(function (data) {
+                PiPot.errorHandler.clearFormErrors('userForm');
+                if (data.status === "success") {
+                    ajax.html("Changes successfully saved.");
+                    setTimeout(function() { location.reload(); }, 2500);
+                } else {
+                    PiPot.errorHandler.showFormErrors(ajax, 'userForm', data.errors);
+                }
+            }).fail(function (data) {
+                PiPot.errorHandler.showErrorInElement(ajax, ["An unknown error occurred while processing the request (statuscode " + data.status + ")"], 10000);
+            });
+        }
+    </script>
+{% endblock %}

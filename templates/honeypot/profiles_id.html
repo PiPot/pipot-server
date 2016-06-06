@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}{{ super() }}Honeypot profile management{% endblock %}
+{% block body %}
+    {{ super() }}
+    <div class="callout primary small">
+        <div class="row column">
+            <h1>Honeypot profile management - {{ profile.name }}</h1>
+            <p>Profile description: {{ profile.description }}</p>
+            <button class="button small" data-open="profileUpdate">Edit description</button>
+            <button class="button small" data-open="profileDelete">Delete profile</button>
+        </div>
+    </div>
+    <div class="row">
+        <h2>Services for this profile</h2>
+        <form>
+            {{ service_form.csrf_token }}
+            <table id="profile_configuration">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Additional config</th>
+                        <th>&nbsp;</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ps in profile.services %}
+                        <tr data-id="{{ ps.service.id }}">
+                            <td>{{ ps.service.id }}</td>
+                            <td>{{ ps.service.name }}</td>
+                            <td>{{ ps.service_configuration|default("", True) }}</td>
+                            <td>
+                                <i class="fa fa-edit" title="Edit configuration" onclick="editService(this);"></i>
+                                <i class="fa fa-trash" title="Remove service" onclick="confirmDeleteService(this);"></i>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>{{ macros.render_field(service_form.service_id, replaceLabelWithPlaceholder=True) }}</td>
+                        <td>{{ macros.render_field(service_form.service_configuration, replaceLabelWithPlaceholder=True) }}</td>
+                        <td><input type="button" class="button" onclick="addService();" value="Add service" /> <span id="addServiceAjax"></span></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </form>
+    </div>
+    <div id="profileUpdate" class="large reveal" data-reveal>
+        <h1>Please enter a new description</h1>
+        <form method="post">
+            {{ form.csrf_token }}
+            {{ macros.render_field(form.type, value="update") }}
+            <textarea id="description" name="description">{{ profile.description }}</textarea>
+            <input type="submit" class="button primary" value="Update description" />
+            <input type="button" class="button secondary" data-close value="Cancel" />
+        </form>
+        <button class="close-button" data-close aria-label="Cancel" type="button">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    <div id="profileDelete" class="large reveal" data-reveal>
+        <h1>Delete this profile</h1>
+        <p>Are you sure you want to delete this profile?</p>
+        <form method="post">
+            {{ form.csrf_token }}
+            {{ macros.render_field(form.type, value="delete") }}
+            <input type="submit" class="button primary" value="Yes" />
+            <input type="button" class="button secondary" data-close value="No" />
+        </form>
+        <button class="close-button" data-close aria-label="Cancel" type="button">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    <div id="serviceDelete" class="large reveal" data-reveal>
+        <h1>Delete this service</h1>
+        <p>Are you sure you want to delete this service?</p>
+        <input type="button" id="serviceDeleteButton" class="button primary" value="Yes" />
+        <input type="button" class="button secondary" data-close value="No" />
+        <span id="serviceDeleteAjax"></span>
+        <button class="close-button" data-close aria-label="Cancel" type="button">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    <div id="serviceEdit" class="large reveal" data-reveal>
+        <h1>Edit service configuration</h1>
+        <textarea id="serviceEditField"></textarea>
+        <input type="submit" id="serviceEditButton" class="button primary" value="Save" />
+        <input type="button" class="button secondary" data-close value="Cancel" />
+        <span id="serviceEditAjax"></span>
+        <button class="close-button" data-close aria-label="Cancel" type="button">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+    <script type="text/javascript">
+        function confirmDeleteService (elm) {
+            $("#serviceDeleteButton").off().on("click", function(){
+                serviceRequest(
+                    {
+                        "service_type": "delete",
+                        "service_id": elm.parentNode.parentNode.getAttribute("data-id")
+                    },
+                    $("#serviceDeleteAjax")
+                );
+            });
+            $("#serviceDelete").foundation('open');
+        }
+        function editService (elm) {
+            document.getElementById('serviceEditField').value = elm.parentNode.previousElementSibling.innerHTML;
+            $("#serviceEditButton").off().on("click", function(){
+                serviceRequest(
+                    {
+                        "service_type": "edit",
+                        "service_id": elm.parentNode.parentNode.getAttribute("data-id"),
+                        "service_configuration": document.getElementById('serviceEditField').value
+                    },
+                    $('#serviceEditAjax')
+                );
+            });
+            $("#serviceEdit").foundation('open');
+        }
+        function addService() {
+            serviceRequest(
+                {
+                    "service_type": "add",
+                    "service_id": document.getElementById('service_id').value,
+                    "service_configuration": document.getElementById('service_configuration').value
+                },
+                $('#addServiceAjax')
+            );
+        }
+        function serviceRequest (data, ajax) {
+            data.csrf_token = $("#csrf_token").val();
+            PiPot.loadHandler.showLoaderInElement(ajax);
+            $.ajax({
+                type: "POST",
+                url: "{{ url_for('.profiles_id', id=profile.id) }}",
+                data: data,
+                dataType: "json"
+            }).done(function (data) {
+                if (data.status === "success") {
+                    window.location.reload();
+                } else {
+                    PiPot.errorHandler.showErrorInElement(ajax, data.errors, 10000);
+                }
+            }).fail(function (data) {
+                PiPot.errorHandler.showErrorInElement(ajax, ["An unknown error occurred while processing the request (statuscode " + data.status + ")"], 10000);
+            });
+        }
+    </script>
+{% endblock %}

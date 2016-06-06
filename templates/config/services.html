@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}{{ super() }}Honeypot services management{% endblock %}
+{% block body %}
+    {{ super() }}
+    <div class="callout primary small">
+        <div class="row column">
+            <h1>Honeypot services management</h1>
+            <p>On this page you can upload, update and delete honeypot services which will be available for deployment.
+                Don't know what is necessary for a service? <a data-open="howTo">Show a small how-to</a>.</p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="medium-8 columns">
+            <h3>Configured services</h3>
+            <table class="stack hover sortable" id="serviceTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th class="sorttable_nosort">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for service in services %}
+                <tr data-id="{{ service.id }}">
+                    <td>{{ service.name }}</td>
+                    <td>{{ service.description }}</td>
+                    <td>
+                        <i class="fa fa-upload" title="Update service code" onclick="confirmUpdateService(this);"></i>&nbsp;
+                        <i class="fa fa-pencil" title="Edit description" onclick="confirmServiceChange(this);"></i>&nbsp;
+                        <i class="fa fa-trash" title="Delete" onclick="confirmDeleteService(this);"></i>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="medium-4 columns">
+            <h3>Add new service</h3>
+            <form method="post" action="{{ url_for('.services') }}" enctype="multipart/form-data">
+                {% if form.errors %}
+                <div>
+                    {% for field, error in form.errors.items() %}
+                        {% for e in error %}
+                            {{ e }}<br>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {{ form.csrf_token }}
+                {{ macros.render_field(form.file) }}
+                {{ macros.render_field(form.description) }}
+                {{ macros.render_field(form.submit) }}
+            </form>
+        </div>
+    </div>
+    <div id="howTo" class="large reveal" data-reveal>
+        <h1>How to create an interface</h1>
+        <p>You can create an interface in 4 simple steps:</p>
+        <ol>
+            <li>Download the <a href="{{ url_for('.get_interface_file', file='IService') }}">IService.py</a> file.</li>
+            <li>Go through the list of required methods and docblocks.</li>
+            <li>Implement a class which inherits from the IService class.</li>
+            <li>Ensure you import the IService class as follows:<br /><code>from pipot.services.IService import IService</code></li>
+            <li>Upload the implemented interface on this page.</li>
+        </ol>
+        <button class="close-button" data-close aria-label="Close" type="button">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    <div id="serviceDelete" class="large reveal" data-reveal>
+        <h1>Please confirm</h1>
+        <p>Are you sure you want to delete <span id="serviceDeleteName"></span>?</p>
+        <button class="button primary" id="serviceDeleteConfirm">Yes, delete service</button>
+        <button class="button secondary" data-close>No, do not delete service</button>
+        <p id="serviceDeleteAjax"></p>
+        <button class="close-button" data-close aria-label="Cancel delete" type="button">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    <div id="serviceChange" class="large reveal" data-reveal>
+        <h1>Change the description</h1>
+        <p>Please enter the new description for <span id="sercviceChangeName"></span>:</p>
+        <textarea id="serviceChangeDescription" rows="5"></textarea>
+        <button class="button primary" id="serviceChangeConfirm">Update description</button>
+        <button class="button secondary" data-close>Cancel</button>
+        <p id="serviceChangeAjax"></p>
+        <button class="close-button" data-close aria-label="Cancel" type="button">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    <div id="serviceUpdate" class="large reveal" data-reveal>
+        <h1>Upload a new version</h1>
+        <p>Select and upload a new version for <span id="serviceUpdateName"></span>:</p>
+        <form name="serviceUpdateForm" target="serviceUpdateFrame" enctype="multipart/form-data" method="post" type="multipart" action="{{ url_for('.services_ajax',action='update') }}" onsubmit="PiPot.loadHandler.showLoaderInElement($('#serviceUpdateAjax'));">
+            {{ updateform.csrf_token }}
+            {{ macros.render_field(updateform.id) }}
+            {{ macros.render_field(updateform.file) }}
+            <input type="submit" class="button primary" value="Upload new version" />
+            <button class="button secondary" data-close>Cancel</button>
+        </form>
+        <p id="serviceUpdateAjax"></p>
+        <iframe style="display: none;" id="serviceUpdateFrame" name="serviceUpdateFrame"></iframe>
+        <button class="close-button" data-close aria-label="Cancel" type="button">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+    <script type="text/javascript">
+        var frameBound = false;
+        function confirmDeleteService(elm){
+            var row = elm.parentNode.parentNode;
+
+            $('#serviceDeleteAjax').empty();
+            $("#serviceDeleteName").html(row.getElementsByTagName('td')[0].innerHTML);
+            $("#serviceDeleteConfirm").off().on('click', function(){
+                deleteService(row);
+            });
+            $("#serviceDelete").foundation('open');
+        }
+        function deleteService(row) {
+            var ajax = $('#serviceDeleteAjax');
+            PiPot.loadHandler.showLoaderInElement(ajax);
+            $.ajax({
+                type: "POST",
+                url: "{{ url_for('.services_ajax', action='delete') }}",
+                data: {
+                    'id': row.getAttribute('data-id'),
+                    'csrf_token': $("#csrf_token").val()
+                },
+                dataType: "json"
+            }).done(function (data) {
+                if (data.status === "success") {
+                    row.parentNode.removeChild(row);
+                    $("#serviceDelete").foundation('close');
+                } else {
+                    PiPot.errorHandler.showErrorInElement(ajax, data.errors, 10000);
+                }
+            }).fail(function (data) {
+                PiPot.errorHandler.showErrorInElement(ajax, ["An unknown error occurred while processing the request (statuscode " + data.status + ")"], 10000);
+            });
+        }
+        function confirmServiceChange(elm){
+            var row = elm.parentNode.parentNode;
+
+            $('#serviceChangeAjax').empty();
+            $("#serviceChangeName").html(row.getElementsByTagName('td')[0].innerHTML);
+            $("#serviceChangeConfirm").off().on('click', function(){
+                serviceChange(row);
+            });
+            $("#serviceChangeDescription").html(row.getElementsByTagName('td')[1].innerHTML);
+            $("#serviceChange").foundation('open');
+        }
+        function serviceChange(row) {
+            var ajax = $('#serviceChangeAjax');
+            PiPot.loadHandler.showLoaderInElement(ajax);
+            $.ajax({
+                type: "POST",
+                url: "{{ url_for('.services_ajax', action='change') }}",
+                data: {
+                    'id': row.getAttribute('data-id'),
+                    'description': $("#serviceChangeDescription").val(),
+                    'csrf_token': $("#csrf_token").val()
+                },
+                dataType: "json"
+            }).done(function (data) {
+                if (data.status === "success") {
+                    row.getElementsByTagName('td')[1].innerHTML = data.description;
+                    $("#serviceChange").foundation('close');
+                } else {
+                    PiPot.errorHandler.showErrorInElement(ajax, data.errors, 10000);
+                }
+            }).fail(function (data) {
+                PiPot.errorHandler.showErrorInElement(ajax, ["An unknown error occurred while processing the request (statuscode " + data.status + ")"], 10000);
+            });
+        }
+        function confirmUpdateService(elm){
+            var row = elm.parentNode.parentNode;
+            $('#serviceUpdate_id').val(row.getAttribute('data-id'));
+            $('#serviceUpdateAjax').empty();
+            $("#serviceUpdateName").html(row.getElementsByTagName('td')[0].innerHTML);
+
+            if (!frameBound) {
+                $("#serviceUpdateFrame").on('load', updateService).on('error', updateService);
+                frameBound = true;
+            }
+            $("#serviceUpdate").foundation('open');
+        }
+        function updateService() {
+            var ajax, raw, data;
+
+            ajax = $('#serviceUpdateAjax');
+            raw = "";
+            try {
+                raw = frames.serviceUpdateFrame.document.getElementsByTagName("pre")[0].innerHTML;
+                data = JSON.parse(raw);
+            } catch (Error) {
+                PiPot.errorHandler.showErrorInElement(ajax, ['Could not parse the result'], 5000);
+                return;
+            }
+            if (data.status === "success") {
+                PiPot.errorHandler.clearFormErrors('serviceUpdateForm');
+                ajax.show().html('Version successfully updated. You can close this dialog.');
+            } else {
+                PiPot.errorHandler.showFormErrors(ajax, 'serviceUpdateForm', data.errors, 'serviceUpdate_');
+            }
+        }
+    </script>
+{% endblock %}

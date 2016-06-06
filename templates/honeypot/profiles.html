@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}{{ super() }}Honeypot profile management{% endblock %}
+{% block body %}
+    {{ super() }}
+    <div class="callout primary small">
+        <div class="row column">
+            <h1>Honeypot profile management</h1>
+            <p>This page allows you to configure various profiles with services and their config that can be used to deploy honeypots afterwards.</p>
+        </div>
+    </div>
+    <div class="row">
+        <h2>Select an existing profile</h2>
+        <select onchange="loadProfile(this.value);">
+                <option value="-1" disabled selected>Select an existing profile</option>
+                {% for profile in profiles %}
+                    <option value="{{ profile.id }}">{{ profile.name }}</option>
+                {% endfor %}
+            </select>
+    </div>
+    <div class="row">
+        <h2>Create a new profile</h2>
+        {% if form.errors %}
+        <div class="callout alert">
+            {% for field, error in form.errors.items() %}
+                {% for e in error %}
+                    {{ e }}<br>
+                {% endfor %}
+            {% endfor %}
+        </div>
+        {% endif %}
+        <form method="post" name="newProfileForm" id="newProfileForm">
+            {{ form.csrf_token }}
+            {{ macros.render_field(form.name) }}
+            {{ macros.render_field(form.description) }}
+            {{ macros.render_field(form.submit) }}
+        </form>
+    </div>
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+    <script type="text/javascript">
+        url = '{{ url_for('.profiles_id', id='') }}';
+        function loadProfile(id){
+            if (id !== '-1') {
+                window.location = url + encodeURIComponent(id);
+            }
+        }
+    </script>
+{% endblock %}

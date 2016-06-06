@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}{{ super() }}About{% endblock %}
+{% block body %}
+    {{ super() }}
+    <br />
+    <div class="row">
+        <div class="callout primary">
+            <h1>{{ applicationName }}</h1>
+            <p>{{ applicationNameShort }} is a flexible honeypot for (industrial) environments that runs on a Raspberry Pi.
+                It was developed by Willem Van Iseghem for the Master thesis at the <a href="https://www.fhstp.ac.at/">Fachhochschule St. Pölten</a> in 2016.
+                <a href="https://www.limessecurity.com">Limes Security GmbH</a> sponsored the thesis by providing the necessary hardware.
+            </p>
+            <p>This instance of {{ applicationName }} is running version {{ applicationVersion }}. More information about the version can ge found on the <a target="_blank" href="https://github.com/PiPot/PiPot">GitHub repository</a>.</p>
+            <p>{{ applicationName }} is released under the <a target="_blank" href="https://en.wikipedia.org/wiki/ISC_license">ICS</a> (permissive) license and can be found on GitHub: <a target="_blank" href="https://github.com/PiPot/PiPot">PiPot on GitHub</a>.</p>
+        </div>
+        <div class="row">
+            <div class="column medium-8">
+                <p>{{ applicationNameShort }} makes use of the next frameworks & open-source utilities:</p>
+                <ul>
+                    <li><a target="_blank" href="http://flask.pocoo.org/docs/latest/">Flask</a></li>
+                    <li><a target="_blank" href="http://www.sqlalchemy.org/">SQLAlchemy</a> &amp; <a target="_blank" href="https://github.com/PyMySQL/PyMySQL">PyMySQL</a></li>
+                    <li><a target="_blank" href="http://twistedmatrix.com/trac/">Twisted</a></li>
+                    <li><a target="_blank" href="http://gunicorn.org/">Gunicorn</a></li>
+                    <li><a target="_blank" href="https://www.dlitz.net/software/pycrypto/">PyCrypto</a></li>
+                    <li><a target="_blank" href="https://pythonhosted.org/passlib/">Passlib</a></li>
+                    <li><a target="_blank" href="https://pypi.python.org/pypi/netifaces/">netifaces</a></li>
+                    <li><a target="_blank" href="http://foundation.zurb.com/">Foundation</a></li>
+                    <li><a target="_blank" href="https://fortawesome.github.io/Font-Awesome/icons/">Font Awesome</a></li>
+                    <li><a target="_blank" href="https://www.python.org/">Python</a></li>
+                    <li><a target="_blank" href="https://minibianpi.wordpress.com/">Minibian</a></li>
+                    <li><a target="_blank" href="https://www.mysql.com/">MySQL</a></li>
+                </ul>
+                <p>Thanks to <a target="_blank" href="https://openclipart.org/detail/167994/math-pi-symbol">voyeg3r</a> and <a target="_blank" href="https://openclipart.org/detail/124135/honey-jar">Ronit</a> from <a href="https://openclipart.org/" target="_blank">openclipart.org</a> for their contributions, which made the logo possible.</p>
+                <p><small>Raspberry Pi is a trademark of the Raspberry Pi Foundation.</small></p>
+            </div>
+            <div class="column medium-4">
+                <img src="{{ url_for('static', filename='img/logo.png') }}">
+            </div>
+        </div>
+
+    </div>
+{% endblock %}

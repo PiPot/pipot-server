@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}{{ super() }}Support{% endblock %}
+{% block body %}
+    {{ super() }}
+    <br />
+    <div class="row">
+        <div class="callout primary">
+            <h1>{{ applicationName }}</h1>
+            <p>If you encounter any issues while using {{ applicationName }}, you can open up an issue on <a target="_blank" href="https://github.com/PiPot/PiPot/issues/new">GitHub</a>.</p>
+            <!-- This page can be modified to include tutorials or help -->
+        </div>
+    </div>
+{% endblock %}
