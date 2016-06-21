@@ -97,7 +97,7 @@ def before_request():
     g.server_name = app.config.get('INSTANCE_NAME', '')
     g.menu_entries = {}
     g.db = create_session(app.config['DATABASE_URI'])
-    g.version = "0.1"
+    g.version = "0.6"
 
 
 @app.teardown_appcontext
