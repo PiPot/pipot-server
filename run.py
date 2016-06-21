@@ -38,19 +38,19 @@ def install_secret_keys(application, secret_session='secret_key',
         application.config['SECRET_KEY'] = open(session_file, 'rb').read()
     except IOError:
         traceback.print_exc()
-        print 'Error: No secret key. Create it with:'
+        print('Error: No secret key. Create it with:')
         if not os.path.isdir(os.path.dirname(session_file)):
-            print 'mkdir -p', os.path.dirname(session_file)
-        print 'head -c 24 /dev/urandom >', session_file
+            print('mkdir -p', os.path.dirname(session_file))
+        print ('head -c 24 /dev/urandom >', session_file)
         do_exit = True
 
     try:
         application.config['CSRF_SESSION_KEY'] = open(csrf_file, 'rb').read()
     except IOError:
-        print 'Error: No secret CSRF key. Create it with:'
+        print('Error: No secret CSRF key. Create it with:')
         if not os.path.isdir(os.path.dirname(csrf_file)):
-            print 'mkdir -p', os.path.dirname(csrf_file)
-        print 'head -c 24 /dev/urandom >', csrf_file
+            print('mkdir -p', os.path.dirname(csrf_file))
+        print('head -c 24 /dev/urandom >', csrf_file)
         do_exit = True
 
     if do_exit:
@@ -76,8 +76,8 @@ def not_found(error):
 
 
 @app.errorhandler(500)
-@template_renderer('500.html', 404)
-def not_found(error):
+@template_renderer('500.html', 500)
+def internal_error(error):
     print(error)
     traceback.print_exc()
     return
@@ -85,7 +85,7 @@ def not_found(error):
 
 @app.errorhandler(403)
 @template_renderer('403.html', 403)
-def not_found(error):
+def forbidden(error):
     return {
         'user_role': g.user.role_id,
         'endpoint': error.description
