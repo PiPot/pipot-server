@@ -109,12 +109,7 @@ PiPot.errorHandler = (function () {
         popup = new Foundation.Reveal($('#'+id));
         popup.open();
     };
-    registerListeners = function () {
-        // We need to add a listener for foundation reveal close events, so we can unregister the reveal instance.
-        $(document).on('closed.zf.reveal', function(e){
-            $(e.target).foundation('destroy');
-        });
-    };
+    registerListeners = function () {};
 
     // Create instance & assign functions
     instance = {};
