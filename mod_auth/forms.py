@@ -114,7 +114,7 @@ class CreateUserForm(Form):
 class UserModifyForm(Form):
     def __init__(self, type, user, formdata=None, obj=None, prefix='',
                  **kwargs):
-        super(UserModifyForm, self).__init__(formdata, obj, prefix, **kwargs)
+        super(UserModifyForm, self).__init__(formdata=formdata, obj=obj, prefix=prefix, **kwargs)
         self.type = type
         self.user = user
 
