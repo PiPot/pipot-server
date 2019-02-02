@@ -34,7 +34,7 @@ class LoginForm(Form):
 
 class AccountForm(Form):
     def __init__(self, formdata=None, obj=None, prefix='', *args, **kwargs):
-        super(AccountForm, self).__init__(formdata, obj, prefix, *args,
+        super(AccountForm, self).__init__(formdata=formdata, obj=obj, prefix=prefix, *args,
                                           **kwargs)
         self.user = obj
 
