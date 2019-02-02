@@ -18,9 +18,9 @@ class DashboardForm(Form):
 
     def __init__(self, formdata=_Auto, obj=None, prefix='', csrf_context=None,
                  secret_key=None, csrf_enabled=None, *args, **kwargs):
-        super(DashboardForm, self).__init__(formdata, obj, prefix,
-                                            csrf_context, secret_key,
-                                            csrf_enabled, *args, **kwargs)
+        super(DashboardForm, self).__init__(formdata=formdata, obj=obj, prefix=prefix,
+                                            csrf_context=csrf_context, secret_key=secret_key,
+                                            csrf_enabled=csrf_enabled, *args, **kwargs)
         self.is_pipot = True
         self.service_inst = None
 
