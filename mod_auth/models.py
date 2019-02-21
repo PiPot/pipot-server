@@ -78,7 +78,7 @@ class User(Base):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, primary_key=True)
     name = Column(String(50), unique=True)
-    email = Column(String(255), unique=True, nullable=True)
+    email = Column(String(191), unique=True, nullable=True)
     password = Column(String(255), unique=False, nullable=False)
     role_id = Column(Integer, ForeignKey('role.id', onupdate="RESTRICT",
                                          ondelete="RESTRICT"), nullable=False)
