@@ -26,7 +26,7 @@ fi
 echo "* Update setuptools            "
 easy_install -U setuptools >> "$install_log" 2>&1
 echo "* Installing pip dependencies"
-pip install twisted pyopenssl sqlalchemy flask passlib pymysql service_identity pycrypto flask-wtf netifaces gunicorn >> "$install_log" 2>&1
+pip install twisted pyopenssl flask-sqlalchemy flask passlib pymysql service_identity pycrypto flask-wtf netifaces gunicorn >> "$install_log" 2>&1
 echo ""
 echo "-------------------------------"
 echo "|   Configuration of PiPot    |"
