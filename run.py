@@ -4,7 +4,7 @@ import traceback
 import sys
 
 from flask import Flask, g
-
+from config_parser import parse_config
 from database import create_session
 from decorators import template_renderer
 from mod_auth.controllers import mod_auth
@@ -14,7 +14,8 @@ from mod_report.controllers import mod_report
 from mod_support.controllers import mod_support
 
 app = Flask(__name__)
-app.config.from_object('config')
+config = parse_config('config')
+app.config.from_mapping(config)
 try:
     app.config['DEBUG'] = os.environ['DEBUG']
 except KeyError:
