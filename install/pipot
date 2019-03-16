@@ -6,6 +6,7 @@ case "${1}" in
     start)
         echo "Starting PiPot daemon..."
         cd /usr/src/pipot/server
+        source /usr/src/pipot/pipot-env/bin/activate
         bin/pipotd --start
         ;;
     stop)

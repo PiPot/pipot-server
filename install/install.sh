@@ -18,7 +18,9 @@ echo ""
 echo "* Updating package list        "
 apt-get update >> "$install_log" 2>&1
 echo "* Installing nginx, python & pip      "
-apt-get -q -y install dnsutils nginx python python-dev python-pip >> "$install_log" 2>&1
+
+apt-get -q -y install virtualenv dnsutils nginx python python-dev python-pip >> "$install_log" 2>&1
+
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
     apt-get -q -y install build-essential libffi-dev libssl-dev >> "$install_log" 2>&1
 fi
@@ -26,6 +28,16 @@ if [ ! -f /etc/init.d/mysql* ]; then
     echo "* Installing MySQL (root password will be empty!)"
     DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server >> "$install_log" 2>&1
 fi
+virtualenv_name="/usr/src/pipot/pipot-env"
+# Check if virtulenv has been created
+if [ ! -d $virtualenv_name ]; then
+    echo "* Create virtualenv $virtualenv_name"
+    virtualenv $virtualenv_name
+else
+    echo "* Use virtualenv $virtualenv_name"
+fi
+source $virtualenv_name/bin/activate
+
 echo "* Update setuptools            "
 pip install --upgrade setuptools  >> "$install_log" 2>&1
 echo "* Installing pip dependencies"

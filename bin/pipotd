@@ -15,6 +15,7 @@ function usage() {
 
 export PYTHONPATH="${PYTHONPATH}:${DIR}/../"
 if [ "${cmd}" == "--start" ]; then
+    source /usr/src/pipot/pipot-env/bin/activate
     twistd -y "${DIR}/pipot.tac" --pidfile "${PIDFILE}" --syslog --prefix=pipotd
     python "${DIR}/bootstrap_gunicorn.py" "${DIR}/../" "${PIDFILE2}"
 elif [ "${cmd}" == "--stop" ]; then
