@@ -13,6 +13,7 @@ function usage() {
     echo -e "\t\t--help\tThis help\n"
 }
 
+export PYTHONPATH="${PYTHONPATH}:${DIR}/../"
 if [ "${cmd}" == "--start" ]; then
     twistd -y "${DIR}/pipot.tac" --pidfile "${PIDFILE}" --syslog --prefix=pipotd
     python "${DIR}/bootstrap_gunicorn.py" "${DIR}/../" "${PIDFILE2}"
