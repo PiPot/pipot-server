@@ -32,7 +32,7 @@ virtualenv_name="/usr/src/pipot/pipot-env"
 # Check if virtulenv has been created
 if [ ! -d $virtualenv_name ]; then
     echo "* Create virtualenv $virtualenv_name"
-    virtualenv $virtualenv_name
+    virtualenv -p /usr/bin/python2.7 --distribute $virtualenv_name
 else
     echo "* Use virtualenv $virtualenv_name"
 fi

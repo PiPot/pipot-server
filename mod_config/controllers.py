@@ -373,7 +373,6 @@ def services_ajax(action):
                     instance = NotificationLoader.load_from_file(temp_path)
                     models = instance.get_used_table_names()
                     # TODO: how to handle altered models?
-                    instance.get_used_table_names()
                     # Overwrite existing
                     os.replace(temp_path, notification.get_file())
                     result['status'] = 'success'
