@@ -1,6 +1,47 @@
+import copy
 from datetime import date
 from functools import wraps
+
 from flask import request, g, render_template
+
+
+def get_permissible_entries(user, entry):
+    """
+    Function to get permissible sub-entries recursively.
+
+    :param user: The user object.
+    :type user: mod_auth.models.User
+    :param entry: The sub entry.
+    :type entry: dict
+
+    """
+
+    allowed_entry = copy.deepcopy(
+        entry)  # entry can be a nested dictionary so deepcopy is used
+    allowed_entry[
+        'entries'] = []  # emptying the list of allowed entries. Permissible sub entries to be appended to this list and returned.
+
+    if 'entries' not in entry.keys():
+        entry['entries'] = []
+
+    if user.can_access_route(entry['route']):
+        for each_child in entry['entries']:
+            if 'entries' not in each_child.keys():
+                each_child['entries'] = []
+            permissible_entries = get_permissible_entries(user, each_child)
+            if permissible_entries != {}:  # if get_permissible_entries() has not returned a {}, route of this child can be accessed by current user
+                allowed_entry['entries'].append(
+                    permissible_entries)  # append this child to list of permissible sub-entries
+    else:
+        return {}  # return an empty dictionary if user can't access route of the current entry.
+
+    if allowed_entry['entries'] == []:  # if there are no permissible child entries,The key 'entries' is removed.
+        allowed_entry.pop('entries')
+
+    if allowed_entry['entries'] == []:  # If there are no permissible child entries,The key 'entries' is removed.
+        allowed_entry.pop('entries')
+
+    return allowed_entry
 
 
 def get_menu_entries(user, title, icon, route='', all_entries=None):
@@ -34,9 +75,8 @@ def get_menu_entries(user, title, icon, route='', all_entries=None):
             passed = user.can_access_route(route)
         else:
             for entry in all_entries:
-                # TODO: make this recursive if necessary
                 if user.can_access_route(entry['route']):
-                    allowed_entries.append(entry)
+                    allowed_entries.append(get_permissible_entries(user, entry))
             if len(allowed_entries) > 0:
                 result['entries'] = allowed_entries
                 passed = True
@@ -54,6 +94,7 @@ def template_renderer(template=None, status=200):
     :param status: The return code
     :type status: int
     """
+
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
