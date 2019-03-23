@@ -2,6 +2,7 @@ import os
 
 import subprocess
 import threading
+import shutil
 
 from flask import Blueprint, g, request, send_file, jsonify, abort, \
     url_for, redirect
@@ -209,7 +210,7 @@ def notifications_ajax(action):
                 try:
                     cls = NotificationLoader.load_from_file(temp_path)
                     # Overwrite existing
-                    os.replace(temp_path, notification.get_file())
+                    shutil.move(temp_path, notification.get_file())
                     # Update requirements
                     _install_notification_service(cls)
                     result['status'] = 'success'
@@ -331,20 +332,20 @@ def services_ajax(action):
     if action == 'delete':
         form = BaseServiceForm(request.form)
         if form.validate_on_submit():
-            notification = Service.query.filter(
+            service = Service.query.filter(
                 Service.id == form.id.data).first()
             # Delete service
-            g.db.delete(notification)
+            g.db.delete(service)
             # Delete file
             try:
-                os.remove(notification.get_file())
+                os.remove(service.get_file())
                 # Finalize service delete
                 g.db.commit()
                 result['status'] = 'success'
             except EnvironmentError as e:
                 g.db.rollback()
                 result['errors'] = ['Error during deleting the '
-                                    'file %s: %s' % (notification.get_file(),
+                                    'file %s: %s' % (service.get_file(),
                                                      e.strerror)]
         else:
             result['errors'] = form.errors
@@ -361,20 +362,20 @@ def services_ajax(action):
     if action == 'update':
         form = UpdateServiceForm(prefix='serviceUpdate_')
         if form.validate_on_submit():
-            notification = Service.query.filter(
+            service = Service.query.filter(
                 Service.id == form.id.data).first()
             file = request.files[form.file.name]
-            if file and file.filename == notification.name + '.py':
+            if file and file.filename == service.name + '.py':
                 # Save file to temp location
-                temp_path = notification.get_file(True)
+                temp_path = service.get_file(True)
                 file.save(temp_path)
                 # Import and verify module
                 try:
-                    instance = NotificationLoader.load_from_file(temp_path)
+                    instance = ServiceLoader.load_from_file(temp_path)
                     models = instance.get_used_table_names()
                     # TODO: how to handle altered models?
                     # Overwrite existing
-                    os.replace(temp_path, notification.get_file())
+                    shutil.move(temp_path, service.get_file())
                     result['status'] = 'success'
                     form = UpdateServiceForm()
                 except ServiceLoader.ServiceLoaderException as e:
