@@ -38,9 +38,6 @@ def get_permissible_entries(user, entry):
     if allowed_entry['entries'] == []:  # if there are no permissible child entries,The key 'entries' is removed.
         allowed_entry.pop('entries')
 
-    if allowed_entry['entries'] == []:  # If there are no permissible child entries,The key 'entries' is removed.
-        allowed_entry.pop('entries')
-
     return allowed_entry
 
 
