@@ -132,6 +132,7 @@ def profiles_id(id):
 @check_access_rights()
 @template_renderer()
 def manage():
+    from run import app
     new_deploy = NewDeploymentForm()
     new_deploy.rpi_model.choices = [(key, value) for key, value in PiModels]
     new_deploy.profile_id.choices = [
@@ -175,7 +176,7 @@ def manage():
         return jsonify(result)
 
     if sys.platform.startswith("linux"):
-        addrs = ni.ifaddresses('eth0')
+        addrs = ni.ifaddresses(app.config.get('NETWORK_INTERFACE'))
         new_deploy.server_ip.data = addrs[ni.AF_INET][0]['addr']
         print('Setting default ip: %s' % addrs[ni.AF_INET][0]['addr'])
     else:

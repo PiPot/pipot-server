@@ -101,6 +101,7 @@ read -e -p "Path to SSL certificate: " -i "/usr/src/pipot/server/cert/pipot.crt"
 read -e -p "Path to SSL key: " -i "/usr/src/pipot/server/cert/pipot.key" config_ssl_key
 read -e -p "Port for SSL Collector to listen on: " -i "1235" config_collector_ssl
 read -e -p "Port for UDP Collector to listen on: " -i "1234" config_collector_udp
+read -e -p "Network interface for instance deployment: " -i "'eth0'" network_interface
 config_db_uri="mysql+pymysql://${db_user}:${db_user_password}@localhost:3306/${db_name}"
 # Request info for creating admin account
 echo ""
@@ -130,6 +131,7 @@ CSRF_ENABLED = True
 DATABASE_URI = '${config_db_uri}'
 COLLECTOR_UDP_PORT = ${config_collector_udp}
 COLLECTOR_SSL_PORT = ${config_collector_ssl}
+NETWORK_INTERFACE = ${network_interface}
 " > "${dir}/../config.py"
 echo "* Making necessary scripts executable (if they aren't already)"
 chmod +x "${dir}/../bin/pipotd" "${dir}/../bin/create_image.sh" "${dir}/../../client/bin/chroot.sh" >> "$install_log" 2>&1
