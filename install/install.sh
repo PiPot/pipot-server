@@ -21,6 +21,11 @@ echo "* Installing nginx, python & pip      "
 
 apt-get -q -y install virtualenv dnsutils nginx python python-dev python-pip >> "$install_log" 2>&1
 
+if [ $(arch) != arm* ]; then
+    echo "This is not arm machine, install qemu-user-static and binfmt-support for image chroot"  >> "${LOG}" 2>&1
+    apt-get -q -y install qemu qemu-user-static binfmt-support >> "$install_log" 2>&1
+fi
+
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
     apt-get -q -y install build-essential libffi-dev libssl-dev >> "$install_log" 2>&1
 fi
@@ -149,10 +154,11 @@ ln -s /etc/nginx/sites-available/pipot /etc/nginx/sites-enabled/pipot >> "$insta
 echo "* Reloading nginx"
 service nginx reload >> "$install_log" 2>&1
 echo "* Downloading base image"
-wget https://sourceforge.net/projects/minibian/files/2016-03-12-jessie-minibian.tar.gz >> "$install_log" 2>&1
-tar -xvf 2016-03-12-jessie-minibian.tar.gz >> "$install_log" 2>&1
-rm 2016-03-12-jessie-minibian.tar.gz >> "$install_log" 2>&1
-mv 2016-03-12-jessie-minibian.img "${dir}/../honeypot_images/base.img" >> "$install_log" 2>&1
+wget https://downloads.raspberrypi.org/raspbian_lite_latest >> "$install_log" 2>&1
+mv raspbian_lite_latest raspbian_lite_latest.zip
+unzip -o raspbian_lite_latest.zip >> "$install_log" 2>&1
+rm raspbian_lite_latest.zip >> "$install_log" 2>&1
+mv *raspbian-stretch-lite.img "${dir}/../honeypot_images/base.img" >> "$install_log" 2>&1
 echo ""
 echo "* Starting PiPot..."
 service pipot start
