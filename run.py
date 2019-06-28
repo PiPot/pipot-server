@@ -57,7 +57,9 @@ def install_secret_keys(application, secret_session='secret_key',
     if do_exit:
         sys.exit(1)
 
-install_secret_keys(app)
+
+if not app.config['TESTING']:
+    install_secret_keys(app)
 
 
 # Expose submenu method for jinja templates

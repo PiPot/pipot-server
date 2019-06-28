@@ -137,6 +137,7 @@ DATABASE_URI = '${config_db_uri}'
 COLLECTOR_UDP_PORT = ${config_collector_udp}
 COLLECTOR_SSL_PORT = ${config_collector_ssl}
 NETWORK_INTERFACE = ${network_interface}
+TESTING = False
 " > "${dir}/../config.py"
 echo "* Making necessary scripts executable (if they aren't already)"
 chmod +x "${dir}/../bin/pipotd" "${dir}/../bin/create_image.sh" "${dir}/../../client/bin/chroot.sh" >> "$install_log" 2>&1
