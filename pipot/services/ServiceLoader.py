@@ -17,6 +17,33 @@ class ServiceLoaderException(Exception):
         return repr(self.value)
 
 
+def load_from_container(container_dir):
+    """Attempts to load the service from a folder with the same name
+    Required container format:
+    myService.zip
+    |-myService.py
+    |-__init__.py (will be created if doesn't exist)
+    |-requirement.txt (optional)
+    |-other file/folder
+
+    :param container_dir: The path of container
+    :type container_dir: str
+    :return: A class instance of the loaded class.
+    :rtype: pipot.services.IService.IService
+    """
+    mod_name = os.path.split(container_dir)[-1]
+    mod_file = os.path.join(container_dir, mod_name + '.py')
+    if not os.path.isfile(mod_file):
+        raise ServiceLoaderException('There is no service file %s.py found inside container' % mod_name)
+    else:
+        if os.path.isfile(os.path.join(container_dir, 'requirement.txt')):
+            pass
+        if not os.path.isfile(os.path.join(container_dir, '__init__.py')):
+            open(os.path.join(container_dir, '__init__.py'), 'w')
+        instance = load_from_file(mod_file)
+        return instance
+
+
 def load_from_file(file_name, temp_folder=True):
     """
     Attempts to load a given class from a file with the same name in this
@@ -33,7 +60,7 @@ def load_from_file(file_name, temp_folder=True):
 
     try:
         py_mod = importlib.import_module(
-            '.' + mod_name,
+            '.' + mod_name + '.' + mod_name,
             temp.__name__ if temp_folder else main.__name__)
 
         if hasattr(py_mod, mod_name):

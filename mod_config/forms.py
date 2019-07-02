@@ -1,4 +1,6 @@
 import re
+import os
+from enum import Enum
 from flask_wtf import Form
 from wtforms import SubmitField, FileField, TextAreaField, HiddenField, \
     SelectField, StringField, IntegerField
@@ -7,44 +9,54 @@ from wtforms.validators import DataRequired, ValidationError
 from mod_config.models import Service, Notification
 
 
-def is_python(file_name):
+class FileType(Enum):
+    PYTHONFILE = 1
+    CONTAINER = 2
+
+
+def is_python_or_container(file_name):
     # Check if it ends on .py
-    is_py = re.compile("^[^/\\\]*\.py$")
-    if not is_py.match(file_name):
-        raise ValidationError('Provided file is not a python (.py) file!')
+    is_py = re.compile(r"^[^/\\]*.py$").match(file_name)
+    is_container = re.compile((r"^[^/\\]*.zip$")).match(file_name)
+    if not is_py and not is_container:
+        raise ValidationError('Provided file is not a python (.py) file or a container (.zip)!')
+    return FileType.CONTAINER if is_container else FileType.PYTHONFILE
 
 
 def simple_service_file_validation(check_service=True):
     def validate_file(form, field):
-        is_python(field.data.filename)
-        # Name cannot be one of the files we already have
-        if field.data.filename in ['__init__py', 'IService.py',
-                                   'ServiceLoader.py']:
-            raise ValidationError('Illegal file name!')
-        if check_service:
-            # Name cannot be registered already
-            service = Service.query.filter(Service.name ==
-                                           field.data.filename).first()
-            if service is not None:
-                raise ValidationError('There is already an interface with '
-                                      'this name!')
+        field.data.filename = os.path.basename(field.data.filename)
+        file_type = is_python_or_container(field.data.filename)
+        if file_type is FileType.PYTHONFILE:
+            # Name cannot be one of the files we already have
+            if field.data.filename in ['__init__py', 'IService.py',
+                                       'ServiceLoader.py']:
+                raise ValidationError('Illegal file name!')
+            if check_service:
+                # Name cannot be registered already
+                service = Service.query.filter(Service.name ==
+                                               field.data.filename).first()
+                if service is not None:
+                    raise ValidationError('There is already an interface with '
+                                          'this name!')
     return validate_file
 
 
 def simple_notification_file_validation(check_notification=True):
     def validate_file(form, field):
-        is_python(field.data.filename)
-        # Name cannot be one of the files we already have
-        if field.data.filename in ['__init__py', 'INotification.py',
-                                   'NotificationLoader.py']:
-            raise ValidationError('Illegal file name!')
-        if check_notification:
-            # Name cannot be registered already
-            notification = Notification.query.filter(
-                Notification.name == field.data.filename).first()
-            if notification is not None:
-                raise ValidationError('There is already an interface with '
-                                      'this name!')
+        file_type = is_python_or_container(field.data.filename)
+        if file_type == FileType.PYTHONFILE:
+            # Name cannot be one of the files we already have
+            if field.data.filename in ['__init__py', 'INotification.py',
+                                       'NotificationLoader.py']:
+                raise ValidationError('Illegal file name!')
+            if check_notification:
+                # Name cannot be registered already
+                notification = Notification.query.filter(
+                    Notification.name == field.data.filename).first()
+                if notification is not None:
+                    raise ValidationError('There is already an interface with '
+                                          'this name!')
     return validate_file
 
 

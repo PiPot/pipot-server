@@ -26,7 +26,7 @@ class Service(Base):
         return os.path.join(
             './pipot/services',
             'temp' if temp_folder else '',
-            self.name + '.py'
+            self.name
         )
 
 

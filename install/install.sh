@@ -114,6 +114,9 @@ echo "We need some information for the admin account"
 read -e -p "Admin username: " -i "admin" admin_name
 read -e -p "Admin email: " admin_email
 read -e -p "Admin password: " admin_password
+while [ ${#admin_password} == 0 ]; do
+    read -e -p "Invalid Admin password(cannot be empty), pleasee retry: " admin_password
+done
 echo "Creating admin account: "
 python "${dir}/init_db.py" "${config_db_uri}" "${admin_name}" "${admin_email}" "${admin_password}"
 echo ""

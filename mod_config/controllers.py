@@ -3,6 +3,7 @@ import os
 import subprocess
 import threading
 import shutil
+import zipfile
 
 from flask import Blueprint, g, request, send_file, jsonify, abort, \
     url_for, redirect
@@ -278,40 +279,68 @@ def data_processing_ajax(action):
     return jsonify(result)
 
 
+def verify_and_import_module(temp_path, final_path, form, is_container=False):
+    # import pdb; pdb.set_trace()
+    if is_container:
+        instance = ServiceLoader.load_from_container(temp_path)
+    else:
+        instance = ServiceLoader.load_from_file(temp_path)
+    # Auto-generate tables
+    instance.get_used_table_names()
+    # Move
+    os.rename(temp_path, final_path)
+    service = Service(instance.__class__.__name__,
+                      form.description.data)
+    g.db.add(service)
+    g.db.commit()
+
 @mod_config.route('/services', methods=['GET', 'POST'])
 @login_required
 @check_access_rights()
 @template_renderer()
 def services():
     form = NewServiceForm()
-
     if form.validate_on_submit():
         # Process uploaded file
         file = request.files[form.file.name]
         if file:
             filename = secure_filename(file.filename)
-            temp_path = os.path.join('./pipot/services/temp', filename)
-            final_path = os.path.join('./pipot/services', filename)
-            if not os.path.isfile(final_path):
-                file.save(temp_path)
-                # Import and verify module
-                try:
-                    instance = ServiceLoader.load_from_file(temp_path)
-                    # Auto-generate tables
-                    instance.get_used_table_names()
-                    # Move
-                    os.rename(temp_path, final_path)
-                    service = Service(instance.__class__.__name__,
-                                      form.description.data)
-                    g.db.add(service)
-                    g.db.commit()
-                    # Reset form, all ok
-                    form = NewServiceForm(None)
-                except ServiceLoader.ServiceLoaderException as e:
-                    # Remove file
-                    os.remove(temp_path)
-                    # Pass error to user
-                    form.errors['file'] = [e.value]
+            basename, extname = os.path.splitext(filename)
+            temp_dir = os.path.join('./pipot/services/temp', basename)
+            final_dir = os.path.join('./pipot/services', basename)
+            if not os.path.isdir(final_dir):
+                if extname == '.zip':
+                    zip_file = zipfile.ZipFile(file)
+                    ret = zip_file.testzip()
+                    if ret:
+                        form.errors['container'] = ['Corrupt container']
+                    else:
+                        zip_file.extractall('./pipot/services/temp')
+                        try:
+                            verify_and_import_module(temp_dir, final_dir, form, is_container=True)
+                            # Reset form, all ok
+                            form = NewServiceForm(None)
+                        except ServiceLoader.ServiceLoaderException as e:
+                            shutil.rmtree(temp_dir)
+                            form.errors['container'] = [e.value]
+                else:
+                    if os.path.exists(temp_dir):
+                        shutil.rmtree(temp_dir)
+                    os.mkdir(temp_dir)
+                    temp_file = os.path.join(temp_dir, filename)
+                    # create the __init__.py for module import
+                    file.save(temp_file)
+                    open(os.path.join(temp_dir, '__init__.py'), 'w')
+                    # Import and verify module
+                    try:
+                        verify_and_import_module(temp_dir, final_dir, form, is_container=False)
+                        # Reset form, all ok
+                        form = NewServiceForm(None)
+                    except ServiceLoader.ServiceLoaderException as e:
+                        # Remove file
+                        shutil.rmtree(temp_dir)
+                        # Pass error to user
+                        form.errors['file'] = [e.value]
             else:
                 form.errors['file'] = ['Service already exists.']
     return {
@@ -338,7 +367,7 @@ def services_ajax(action):
             g.db.delete(service)
             # Delete file
             try:
-                os.remove(service.get_file())
+                shutil.rmtree(service.get_file())
                 # Finalize service delete
                 g.db.commit()
                 result['status'] = 'success'
