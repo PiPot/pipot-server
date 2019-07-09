@@ -1,0 +1,9 @@
+ignore:
+  - "tests/*"
+  - "templates/*"
+  - "static/*"
+  - "bin/*"
+  - "cert/*"
+  - "install/*"
+  - ".idea/"
+  - "honeypot_images/*"

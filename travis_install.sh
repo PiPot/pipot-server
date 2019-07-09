@@ -17,5 +17,3 @@ if [ ! -f /etc/init.d/mysql* ]; then
 fi
 echo "* Update setuptools            "
 pip install --upgrade setuptools
-echo "* Installing pip dependencies"
-pip install nose2 mock ipaddress enum34 cryptography idna sqlalchemy twisted pyopenssl flask-sqlalchemy flask passlib pymysql service_identity pycrypto flask-wtf netifaces gunicorn

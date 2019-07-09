@@ -3,8 +3,13 @@ sudo: true  # http://docs.travis-ci.com/user/migrating-from-legacy/
 language: python
 python:
   - 2.7
+  - 3.6
 install: 
   - sudo ./travis_install.sh
+  - pip install -r requirements.txt
+  - pip install codecov 
   - sudo ./tests/installTestDb.sh
 script: 
-  - nose2 -v
+  - nose2 --with-coverage
+after_success:
+  - codecov
