@@ -8,7 +8,7 @@ from mock import patch
 
 from flask import request, jsonify
 
-import authMock
+import tests.authMock
 from database import create_session
 from mod_config.models import Service
 from mod_honeypot.models import Profile, PiModels, PiPotReport, ProfileService, \
@@ -24,30 +24,24 @@ class TestServiceManagement(TestAppBase):
     def tearDown(self):
         super(TestServiceManagement, self).tearDown()
 
-    @patch('mod_report.forms.DashboardForm.validate_deployment')
-    @patch('mod_report.forms.DashboardForm.validate_service')
-    @patch('mod_report.forms.DashboardForm.validate_report_type')
-    def testDynamicDataReport(self, validate_report_type, validate_service, validate_deployment):
+    def testDynamicDataReport(self):
         deployment_id = 1
-        service_id = 1
-        report_type = 1
+        profile_id = 1
+        report_type = 'General data'
         try:
             db = create_session(self.app.config['DATABASE_URI'], drop_tables=False)
             # create service, profile, delpoyment
-            service = Service(name='test-service', description="test")
             profile = Profile(name='test-profile', description="test")
-            db.add(service)
             db.add(profile)
             db.commit()
-            profile_row = db.query(Profile.id).first()
             deployment = Deployment(
-                name='test-deloyment', profile_id=profile_row.id,
+                name='test-deloyment', profile_id=profile_id,
                 instance_key='test', mac_key='test',
-                encryption_key='test', rpi_model=PiModels.from_string('one'),
+                encryption_key='test', rpi_model=PiModels['one'],
                 server_ip='test', interface='test',
                 wlan_config='test', hostname='test',
                 rootpw='test', debug=True,
-                collector_type=CollectorTypes.from_string('tcp'))
+                collector_type=CollectorTypes['tcp'])
             db.add(deployment)
             db.commit()
             # create report data
@@ -69,7 +63,7 @@ class TestServiceManagement(TestAppBase):
             with self.app.test_client() as client:
                 data = dict(
                     deployment=deployment_id,
-                    service=service_id,
+                    service=0,
                     report_type=report_type,
                     data_num=data_num
                 )
@@ -81,7 +75,7 @@ class TestServiceManagement(TestAppBase):
             with self.app.test_client() as client:
                 data = dict(
                     deployment=deployment_id,
-                    service=service_id,
+                    service=0,
                     report_type=report_type,
                     data_num=data_num
                 )
@@ -92,7 +86,7 @@ class TestServiceManagement(TestAppBase):
             with self.app.test_client() as client:
                 data = dict(
                     deployment=deployment_id,
-                    service=service_id,
+                    service=0,
                     report_type=report_type,
                     data_num=data_num
                 )

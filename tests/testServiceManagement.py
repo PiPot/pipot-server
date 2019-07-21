@@ -10,7 +10,7 @@ from werkzeug.datastructures import FileStorage
 
 from flask import request, jsonify
 
-import authMock
+import tests.authMock
 from database import create_session
 from mod_config.models import Service
 from tests.testAppBase import TestAppBase

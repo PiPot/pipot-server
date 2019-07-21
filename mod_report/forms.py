@@ -43,7 +43,7 @@ class DashboardForm(Form):
         # Needs to be a valid service
         services = [ps.service for ps in
                     form.deployment_inst.profile.services]
-        service = filter(lambda x: x.id == field.data, services)[0]
+        service = list(filter(lambda x: x.id == field.data, services))[0]
         if service is None:
             raise ValidationError('invalid service id')
         form.service_inst = service
