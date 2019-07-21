@@ -3,6 +3,7 @@ import sys
 import mock
 import unittest
 import json
+import codecs
 from mock import patch
 from functools import wraps
 from werkzeug.datastructures import FileStorage
@@ -30,7 +31,7 @@ class TestServiceManagement(TestAppBase):
         # upload the service file
         # service_name = 'TelnetService'
         # service_file_name = service_name + '.py'
-        service_file = open(os.path.join(test_dir, 'testFiles', service_file_name), 'r')
+        service_file = codecs.open(os.path.join(test_dir, 'testFiles', service_file_name), 'rb')
         # service_file = FileStorage(service_file)
         with self.app.test_client() as client:
             data = dict(

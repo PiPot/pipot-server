@@ -235,8 +235,8 @@ def notifications_ajax(action):
 @template_renderer()
 def data_processing():
     form = RuleForm(request.form)
-    form.action.choices = [(key, value) for key, value in Actions]
-    form.condition.choices = [(key, value) for key, value in Conditions]
+    form.action.choices = [(item.name, item.value) for item in Actions]
+    form.condition.choices = [(item.name, item.value) for item in Conditions]
     notification_services = [(n.id, n.name) for n in Notification.query.all()]
     form.notification_id.choices = notification_services
     form.service_id.choices = [(s.id, s.name) for s in Service.query.all()]
@@ -245,8 +245,9 @@ def data_processing():
         rule = Rule(
             form.service_id.data, form.notification_id.data,
             form.notification_config.data,
-            Conditions.from_string(form.condition.data), form.level.data,
-            Actions.from_string(form.action.data)
+            Conditions[form.condition.data],
+            form.level.data,
+            Actions[form.action.data]
         )
         g.db.add(rule)
         g.db.commit()

@@ -1,10 +1,11 @@
 import datetime
 import json
 import os
+import enum
 
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, orm, Boolean
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, orm, Boolean, Enum
 
-from database import Base, DeclEnum
+from database import Base
 from pipot.services.IService import IModel
 
 
@@ -62,16 +63,15 @@ class ProfileService(Base):
             return json.loads(self.service_configuration)
 
 
-class PiModels(DeclEnum):
-    one = "one", "Raspberry Pi 1 model B"
-    two = "two", "Raspberry Pi 2"
-    three = "three", "Raspberry Pi 3"
+class PiModels(enum.Enum):
+    one = "one"
+    two = "two"
+    three = "three"
 
 
-class CollectorTypes(DeclEnum):
-    udp = "udp", "UDP"
-    tcp = "tcp", "TCP (SSL)"
-
+class CollectorTypes(enum.Enum):
+    udp = "udp"
+    tcp = "tcp"
 
 class Deployment(Base):
     __tablename__ = 'deployment'
@@ -86,14 +86,14 @@ class Deployment(Base):
     instance_key = Column(String(20))
     mac_key = Column(String(32))
     encryption_key = Column(String(32))
-    rpi_model = Column(PiModels.db_type())
+    rpi_model = Column(Enum(PiModels))
     server_ip = Column(String(46))  # IPv6 proof
     interface = Column(String(20))
     wlan_config = Column(Text())
     hostname = Column(String(64))
     rootpw = Column(String(50))
     debug = Column(Boolean())
-    collector_type = Column(CollectorTypes.db_type())
+    collector_type = Column(Enum(CollectorTypes))
 
     def __init__(self, name, profile_id, instance_key, mac_key,
                  encryption_key, rpi_model, server_ip, interface,

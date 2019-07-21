@@ -18,7 +18,7 @@ from mod_auth.controllers import check_access_rights, login_required
 from mod_config.models import Service
 from mod_honeypot.forms import NewDeploymentForm, ModifyProfileForm, \
     NewProfileForm, ServiceProfileForm
-from models import Profile, ProfileService, Deployment, PiPotReport, \
+from mod_honeypot.models import Profile, ProfileService, Deployment, PiPotReport, \
     PiModels, CollectorTypes
 
 mod_honeypot = Blueprint('honeypot', __name__)

@@ -1,11 +1,12 @@
 import json
 import os
+import enum
 
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, \
-    UniqueConstraint
+    UniqueConstraint, Enum
 from sqlalchemy.orm import relationship
 
-from database import Base, DeclEnum
+from database import Base
 
 
 class Service(Base):
@@ -52,18 +53,18 @@ class Notification(Base):
         )
 
 
-class Actions(DeclEnum):
-    drop = "drop", "Drop"
-    store = "store", "Store"
+class Actions(enum.Enum):
+    drop = "drop"
+    store = "store"
 
 
-class Conditions(DeclEnum):
-    st = '<', '<'
-    gt = '>', '>'
-    eq = '==', '=='
-    se = '<=', '<='
-    ge = '>=', '>='
-    ne = '!=', '!='
+class Conditions(enum.Enum):
+    st = '<'
+    gt = '>'
+    eq = '=='
+    se = '<='
+    ge = '>='
+    ne = '!='
 
 
 class Rule(Base):
@@ -80,9 +81,9 @@ class Rule(Base):
                                         ondelete="CASCADE"),
                              nullable=True)
     notification_config = Column(Text)
-    condition = Column(Conditions.db_type())
+    condition = Column(Enum(Conditions))
     level = Column(Integer)
-    action = Column(Actions.db_type())
+    action = Column(Enum(Actions))
     UniqueConstraint('service_id', 'notification_id', 'condition')
     service = relationship(Service)
     notification = relationship(Notification)

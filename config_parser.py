@@ -12,7 +12,7 @@ def parse_config(obj):
     :rtype: dict
     """
     config = {}
-    if isinstance(obj, (str, unicode)):
+    if isinstance(obj, (bytes, str)):
         obj = import_string(obj)
     for key in dir(obj):
         if key.isupper():
