@@ -75,11 +75,16 @@ def dashboard_ajax(action):
                     '<td>{{ entry.timestamp }}</td><td>{{ entry.message }}' \
                     '</td></tr>{% else %}<tr><td colspan="4">No entries ' \
                     'for this timespan</td></tr>{% endfor %}</tbody></table>'
-                timestamp = datetime.datetime.utcnow() - datetime.timedelta(
-                    days=7)
-                data = PiPotReport.query.filter(
-                    PiPotReport.timestamp >= timestamp).order_by(
-                    PiPotReport.timestamp.desc()).all()
+                if form.data_num.data == -1:
+                    timestamp = datetime.datetime.utcnow() - datetime.timedelta(
+                        days=7)
+                    data = PiPotReport.query.filter(
+                        PiPotReport.timestamp >= timestamp).order_by(
+                        PiPotReport.timestamp.desc()).all()
+                else:
+                    data = PiPotReport.query.filter().order_by(
+                        PiPotReport.timestamp.desc()).limit(form.data_num.data).all()
+                result['data_num'] = len(data)
                 template_args = {
                     'entries': data
                 }

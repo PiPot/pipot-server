@@ -8,43 +8,10 @@ from functools import wraps
 from werkzeug.datastructures import FileStorage
 
 from flask import request, jsonify
-# Need to append server root path to ensure we can import the necessary files.
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import authMock
 from database import create_session
-import mod_auth.controllers
 from mod_config.models import Service
-import decorators
-
-
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        return f(*args, **kwargs)
-    return decorated_function
-
-
-def check_access_rights(parent_route=None):
-    def access_decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            route = parent_route
-            if route is None:
-                route = request.endpoint
-            elif route.startswith("."):
-                # Relative to current blueprint, so we'll need to adjust
-                route = request.endpoint[:request.endpoint.rindex('.')] + \
-                        route
-            return f(*args, **kwargs)
-            # Return page not allowed
-            abort(403, request.endpoint)
-        return decorated_function
-    return access_decorator
-
-
-mod_auth.controllers.login_required = login_required
-mod_auth.controllers.check_access_rights = check_access_rights
-
 from tests.testAppBase import TestAppBase
 
 test_dir = os.path.dirname(os.path.abspath(__file__))
@@ -78,11 +45,13 @@ class TestServiceManagement(TestAppBase):
         # check service file and folder is removed under temp_path
         self.assertFalse(os.path.isdir(os.path.join(service_dir, 'temp', service_name)))
         # check database
-        db = create_session(self.app.config['DATABASE_URI'], drop_tables=False)
-        service_row = db.query(Service.id, Service.name).first()
-        service_id = service_row.id
-        name = service_row.name
-        db.remove()
+        try:
+            db = create_session(self.app.config['DATABASE_URI'], drop_tables=False)
+            service_row = db.query(Service.id, Service.name).first()
+            service_id = service_row.id
+            name = service_row.name
+        finally:
+            db.remove()
         self.assertEqual(service_name, name)
         # delete service file
         with self.app.test_client() as client:
@@ -95,10 +64,12 @@ class TestServiceManagement(TestAppBase):
         # check service file and folder is removed unser final_path
         self.assertFalse(os.path.isfile(os.path.join(service_dir, service_name, service_file_name)))
         # check database
-        db = create_session(self.app.config['DATABASE_URI'], drop_tables=False)
-        service_row = db.query(Service.id, Service.name).first()
-        result = (service_row is None)
-        db.remove()
+        try:
+            db = create_session(self.app.config['DATABASE_URI'], drop_tables=False)
+            service_row = db.query(Service.id, Service.name).first()
+            result = (service_row is None)
+        finally:
+            db.remove()
         self.assertTrue(result)
 
     def test_add_and_delete_service_file(self):

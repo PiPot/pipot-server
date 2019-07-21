@@ -96,12 +96,21 @@
                 'deployment': deployment.id,
                 'service': service.id,
                 'report_type': report_type,
-                'csrf_token': $("#csrf_token").val()
+                'csrf_token': $("#csrf_token").val(),
+                'data_num': typeof loadData.dataNum == "undefined"? -1 : loadData.dataNum
             },
             dataType: "json"
         }).done(function (data) {
             if (data.status === "success") {
                 ajax.html(data.html).show();
+                if(typeof loadData.dataNum == "undefined"){
+                    loadData.dataNum = data.data_num
+                    document.getElementById("load_data").value = "show more"
+                } else if (loadData.dataNum > data.data_num){
+                    alert("There is no more data to load!");
+                } else {
+                    loadData.dataNum += 5
+                }
             } else {
                 PiPot.errorHandler.showErrorInElement(ajax, data.errors, 10000);
             }
