@@ -24,7 +24,7 @@ class TestServiceManagement(TestAppBase):
     def tearDown(self):
         super(TestServiceManagement, self).tearDown()
 
-    def testDynamicDataReport(self):
+    def test_dynamic_data_report(self):
         deployment_id = 1
         profile_id = 1
         report_type = 'General data'
@@ -57,45 +57,44 @@ class TestServiceManagement(TestAppBase):
                 report_data = PiPotReport(deployment_id=1, message="test", timestamp=time_before_a_week)
                 db.add(report_data)
                 db.commit()
-            db.remove()
-            # request without the number of data specified
-            data_num = -1
-            with self.app.test_client() as client:
-                data = dict(
-                    deployment=deployment_id,
-                    service=0,
-                    report_type=report_type,
-                    data_num=data_num
-                )
-                response = client.post('/dashboard/load', data=data, follow_redirects=False)
-                self.assertEqual(response.get_json()['status'], 'success')
-                self.assertEqual(response.get_json()['data_num'], data_num_within_a_week)
-            # request with the number of data specified
-            data_num = min(data_num_within_a_week + 10, data_num_before_a_week + data_num_within_a_week)
-            with self.app.test_client() as client:
-                data = dict(
-                    deployment=deployment_id,
-                    service=0,
-                    report_type=report_type,
-                    data_num=data_num
-                )
-                response = client.post('/dashboard/load', data=data, follow_redirects=False)
-                self.assertEqual(response.get_json()['status'], 'success')
-                self.assertEqual(response.get_json()['data_num'], data_num)
-            data_num = data_num_before_a_week + data_num_within_a_week + 10
-            with self.app.test_client() as client:
-                data = dict(
-                    deployment=deployment_id,
-                    service=0,
-                    report_type=report_type,
-                    data_num=data_num
-                )
-                response = client.post('/dashboard/load', data=data, follow_redirects=False)
-                self.assertEqual(response.status_code, 200)
-                self.assertEqual(response.get_json()['status'], 'success')
-                self.assertEqual(response.get_json()['data_num'], data_num_before_a_week + data_num_within_a_week)
         finally:
             db.remove()
+        # request without the number of data specified
+        data_num = -1
+        with self.app.test_client() as client:
+            data = dict(
+                deployment=deployment_id,
+                service=0,
+                report_type=report_type,
+                data_num=data_num
+            )
+            response = client.post('/dashboard/load', data=data, follow_redirects=False)
+            self.assertEqual(response.get_json()['status'], 'success')
+            self.assertEqual(response.get_json()['data_num'], data_num_within_a_week)
+        # request with the number of data specified
+        data_num = min(data_num_within_a_week + 10, data_num_before_a_week + data_num_within_a_week)
+        with self.app.test_client() as client:
+            data = dict(
+                deployment=deployment_id,
+                service=0,
+                report_type=report_type,
+                data_num=data_num
+            )
+            response = client.post('/dashboard/load', data=data, follow_redirects=False)
+            self.assertEqual(response.get_json()['status'], 'success')
+            self.assertEqual(response.get_json()['data_num'], data_num)
+        data_num = data_num_before_a_week + data_num_within_a_week + 10
+        with self.app.test_client() as client:
+            data = dict(
+                deployment=deployment_id,
+                service=0,
+                report_type=report_type,
+                data_num=data_num
+            )
+            response = client.post('/dashboard/load', data=data, follow_redirects=False)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.get_json()['status'], 'success')
+            self.assertEqual(response.get_json()['data_num'], data_num_before_a_week + data_num_within_a_week)
 
 
 if __name__ == '__main__':

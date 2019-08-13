@@ -134,12 +134,11 @@ def profiles_id(id):
 def manage():
     from run import app
     new_deploy = NewDeploymentForm()
-    new_deploy.rpi_model.choices = [(key, value) for key, value in PiModels]
+    new_deploy.rpi_model.choices = [(item.name, item.value) for item in PiModels]
     new_deploy.profile_id.choices = [
         (p.id, p.name) for p in Profile.query.all()]
-    new_deploy.collector_type.choices = [(key, value) for key, value in
+    new_deploy.collector_type.choices = [(item.name, item.value) for item in
                                          CollectorTypes]
-
     if request.is_xhr:
         result = {
             'status': 'error',
@@ -158,11 +157,11 @@ def manage():
             deployment = Deployment(
                 new_deploy.name.data, new_deploy.profile_id.data,
                 instance_key, mac_key, encryption_key,
-                PiModels.from_string(new_deploy.rpi_model.data),
+                PiModels[new_deploy.rpi_model.data],
                 new_deploy.server_ip.data, new_deploy.interface.data,
                 new_deploy.wlan_configuration.data, new_deploy.hostname.data,
                 new_deploy.rootpw.data, new_deploy.debug.data,
-                CollectorTypes.from_string(new_deploy.collector_type.data)
+                CollectorTypes[new_deploy.collector_type.data]
             )
             g.db.add(deployment)
             g.db.commit()
@@ -170,7 +169,7 @@ def manage():
             result['id'] = deployment.id
         else:
             errors = []
-            for err in new_deploy.errors.itervalues():
+            for _, err in new_deploy.errors.items():
                 errors.extend(err)
             result['errors'] = errors
         return jsonify(result)
