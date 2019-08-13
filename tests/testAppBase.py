@@ -16,7 +16,7 @@ import tests.config
 import flask
 from flask import g, current_app, session
 from collections import namedtuple
-from database import create_session, Base
+from database import create_session
 from mod_auth.models import User, Role, Page, PageAccess
 from mod_config.models import Service, Notification, Actions, Conditions, Rule
 from mod_honeypot.models import Profile, PiModels, PiPotReport, ProfileService, \
@@ -88,6 +88,7 @@ class TestAppBase(unittest.TestCase):
         self.client = self.app.test_client(self)
 
     def tearDown(self):
+        from database import Base
         db = create_session(self.app.config['DATABASE_URI'], drop_tables=False)
         db_engine = create_engine(self.app.config['DATABASE_URI'], convert_unicode=True)
         Base.metadata.drop_all(bind=db_engine)

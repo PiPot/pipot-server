@@ -1,5 +1,6 @@
 import importlib
 import os
+import sys
 
 from pipot.services.IService import IService
 import pipot.services as main
@@ -17,7 +18,7 @@ class ServiceLoaderException(Exception):
         return repr(self.value)
 
 
-def load_from_container(container_dir):
+def load_from_container(container_dir, temp_folder=False, re_load=False):
     """Attempts to load the service from a folder with the same name
     Required container format:
     myService.zip
@@ -37,14 +38,15 @@ def load_from_container(container_dir):
         raise ServiceLoaderException('There is no service file %s.py found inside container' % mod_name)
     else:
         if os.path.isfile(os.path.join(container_dir, 'requirement.txt')):
+            # TODO: ideally add check on pip install
             pass
         if not os.path.isfile(os.path.join(container_dir, '__init__.py')):
             open(os.path.join(container_dir, '__init__.py'), 'w')
-        instance = load_from_file(mod_file)
+        instance = load_from_file(mod_file, temp_folder=temp_folder, re_load=re_load)
         return instance
 
 
-def load_from_file(file_name, temp_folder=True):
+def load_from_file(file_name, temp_folder=True, re_load=False):
     """
     Attempts to load a given class from a file with the same name in this
     folder.
@@ -59,10 +61,13 @@ def load_from_file(file_name, temp_folder=True):
     mod_name, file_ext = os.path.splitext(os.path.split(file_name)[-1])
 
     try:
-        py_mod = importlib.import_module(
-            '.' + mod_name + '.' + mod_name,
-            temp.__name__ if temp_folder else main.__name__)
-
+        if re_load:
+            try:
+                del sys.modules['pipot.services.' + mod_name]
+                del sys.modules['pipot.services.' + mod_name + '.' + mod_name]
+            except KeyError:
+                pass
+        py_mod = importlib.import_module('pipot.services.' + mod_name + '.' + mod_name)
         if hasattr(py_mod, mod_name):
             class_inst = getattr(py_mod, mod_name)(None, None)
         else:

@@ -23,7 +23,7 @@ def is_python_or_container(file_name):
     return FileType.CONTAINER if is_container else FileType.PYTHONFILE
 
 
-def simple_service_file_validation(check_service=True):
+def simple_service_file_validation(check_service=False):
     def validate_file(form, field):
         field.data.filename = os.path.basename(field.data.filename)
         file_type = is_python_or_container(field.data.filename)
@@ -63,7 +63,7 @@ def simple_notification_file_validation(check_notification=True):
 class NewServiceForm(Form):
     file = FileField('Service file', [
         DataRequired(message='No service file was provided.'),
-        simple_service_file_validation()
+        simple_service_file_validation(check_service=True)
     ])
     description = TextAreaField('Service description', [
         DataRequired(message='Service description cannot be empty.')],
@@ -93,7 +93,7 @@ class EditServiceForm(BaseServiceForm):
 class UpdateServiceForm(BaseServiceForm):
     file = FileField('Service file', [
         DataRequired(message='no service file was provided.'),
-        simple_service_file_validation(False)
+        simple_service_file_validation(check_service=False)
     ])
 
 

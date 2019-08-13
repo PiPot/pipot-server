@@ -1,13 +1,16 @@
 import os
+import sys
 
 import subprocess
 import threading
 import shutil
 import zipfile
+import importlib
 
 from flask import Blueprint, g, request, send_file, jsonify, abort, \
     url_for, redirect
 from werkzeug.utils import secure_filename
+from sqlalchemy import create_engine
 
 from database import create_session
 from decorators import get_menu_entries, template_renderer
@@ -18,7 +21,7 @@ from mod_config.forms import NewServiceForm, BaseServiceForm, \
     RuleForm, DeleteRuleForm
 from mod_config.models import Service, Notification, Rule, Actions, Conditions
 from pipot.notifications import NotificationLoader
-from pipot.services import ServiceLoader
+from pipot.services import ServiceLoader, ServiceModelsManager
 
 mod_config = Blueprint('config', __name__)
 
@@ -280,19 +283,19 @@ def data_processing_ajax(action):
     return jsonify(result)
 
 
-def verify_and_import_module(temp_path, final_path, form, is_container=False):
+def verify_and_import_module(final_path, form, is_container=False, re_load=True):
     if is_container:
-        instance = ServiceLoader.load_from_container(temp_path)
+        instance = ServiceLoader.load_from_container(final_path, temp_folder=False, re_load=re_load)
     else:
-        instance = ServiceLoader.load_from_file(temp_path)
+        instance = ServiceLoader.load_from_file(final_path, temp_folder=False, re_load=re_load)
     # Auto-generate tables
     instance.get_used_table_names()
-    # Move
-    os.rename(temp_path, final_path)
-    service = Service(instance.__class__.__name__,
-                      form.description.data)
+    # Update database
+    service = Service(instance.__class__.__name__, form.description.data)
     g.db.add(service)
     g.db.commit()
+    return instance
+
 
 @mod_config.route('/services', methods=['GET', 'POST'])
 @login_required
@@ -306,7 +309,6 @@ def services():
         if file:
             filename = secure_filename(file.filename)
             basename, extname = os.path.splitext(filename)
-            temp_dir = os.path.join('./pipot/services/temp', basename)
             final_dir = os.path.join('./pipot/services', basename)
             if not os.path.isdir(final_dir):
                 if extname == '.zip':
@@ -315,32 +317,37 @@ def services():
                     if ret:
                         form.errors['container'] = ['Corrupt container']
                     else:
-                        zip_file.extractall('./pipot/services/temp')
+                        zip_file.extractall('./pipot/services')
                         try:
-                            verify_and_import_module(temp_dir, final_dir, form, is_container=True)
+                            verify_and_import_module(final_dir, form, is_container=True, re_load=False)
                             # Reset form, all ok
                             form = NewServiceForm(None)
                         except ServiceLoader.ServiceLoaderException as e:
-                            shutil.rmtree(temp_dir)
+                            shutil.rmtree(final_dir)
                             form.errors['container'] = [e.value]
                 else:
-                    if os.path.exists(temp_dir):
-                        shutil.rmtree(temp_dir)
-                    os.mkdir(temp_dir)
-                    temp_file = os.path.join(temp_dir, filename)
+                    os.mkdir(final_dir)
+                    final_file = os.path.join(final_dir, filename)
                     # create the __init__.py for module import
-                    file.save(temp_file)
-                    open(os.path.join(temp_dir, '__init__.py'), 'w')
+                    file.save(final_file)
+                    open(os.path.join(final_dir, '__init__.py'), 'w')
                     # Import and verify module
                     try:
-                        verify_and_import_module(temp_dir, final_dir, form, is_container=False)
+                        verify_and_import_module(final_dir, form, is_container=False, re_load=False)
                         # Reset form, all ok
                         form = NewServiceForm(None)
                     except ServiceLoader.ServiceLoaderException as e:
+                        try:
+                            del sys.modules['pipot.services.' + basename]
+                            del sys.modules['pipot.services.' + basename + '.' + basename]
+                        except KeyError:
+                            pass
                         # Remove file
-                        shutil.rmtree(temp_dir)
+                        shutil.rmtree(final_dir)
                         # Pass error to user
                         form.errors['file'] = [e.value]
+                # add service name to services.txt
+                ServiceModelsManager.add_models(basename)
             else:
                 form.errors['file'] = ['Service already exists.']
     return {
@@ -363,8 +370,16 @@ def services_ajax(action):
         if form.validate_on_submit():
             service = Service.query.filter(
                 Service.id == form.id.data).first()
-            # Delete service
+            # Delete service in db
             g.db.delete(service)
+            # Delete service model
+            removed_models = ServiceModelsManager.rm_models(service.name)
+            for model_name in removed_models:
+                module = importlib.import_module('pipot.services' + '.' + service.name + '.' + service.name)
+                model = getattr(module, model_name.lstrip('.' + service.name))
+                from database import Base, db_engine
+                Base.metadata.drop_all(bind=db_engine, tables=[model.__table__])
+                Base.metadata.remove(model.__table__)
             # Delete file
             try:
                 shutil.rmtree(service.get_file())
@@ -391,32 +406,51 @@ def services_ajax(action):
     if action == 'update':
         form = UpdateServiceForm(prefix='serviceUpdate_')
         if form.validate_on_submit():
+            # TODO: add support for container-based service update
             service = Service.query.filter(
                 Service.id == form.id.data).first()
             file = request.files[form.file.name]
-            if file and file.filename == service.name + '.py':
-                # Save file to temp location
-                temp_path = service.get_file(True)
-                file.save(temp_path)
+            filename = secure_filename(file.filename)
+            basename, extname = os.path.splitext(filename)
+            final_dir = os.path.join('./pipot/services', basename)
+            temp_dir = os.path.join('./pipot/services', 'temp')
+            if file.filename == service.name + '.py':
+                # get the original class instance, remove tables from db and meta
+                old_instance = ServiceLoader.load_from_file(final_dir, temp_folder=False, re_load=False)
+                from database import Base, db_engine
+                for table_name, model in old_instance.get_used_table_names().items():
+                    Base.metadata.drop_all(bind=db_engine, tables=[model.__table__])
+                    Base.metadata.remove(model.__table__)
+                # move the original service to temp for backup
+                shutil.move(os.path.join(final_dir),
+                            os.path.join(temp_dir))
+                os.makedirs(final_dir)
+                open(os.path.join(final_dir, '__init__.py'), 'w')
+                file.save(os.path.join(final_dir, filename))
                 # Import and verify module
                 try:
-                    instance = ServiceLoader.load_from_file(temp_path)
-                    models = instance.get_used_table_names()
-                    # TODO: how to handle altered models?
-                    # Overwrite existing
-                    shutil.move(temp_path, service.get_file())
+                    new_instance = ServiceLoader.load_from_file(final_dir, temp_folder=False, re_load=True)
+                    # Reset form, all ok
+                    form = NewServiceForm(None)
+                    # remove the old service file
+                    shutil.rmtree(os.path.join(temp_dir, basename))
                     result['status'] = 'success'
-                    form = UpdateServiceForm()
                 except ServiceLoader.ServiceLoaderException as e:
-                    # Remove file
-                    os.remove(temp_path)
+                    # bring back the old service file
+                    shutil.rmtree(final_dir)
+                    shutil.move(os.path.join(temp_dir, basename),
+                                os.path.join('./pipot/services'))
+                    old_instance = ServiceLoader.load_from_file(final_dir, temp_folder=False, re_load=True)
                     # Pass error to user
                     form.errors['file'] = [e.value]
+                    result['errors'] = form.errors
             else:
                 form.errors['file'] = [
                     'Filename does not match the service name'
                 ]
-        result['errors'] = form.errors
+                result['errors'] = form.errors
+        else:
+            result['errors'] = form.errors
     return jsonify(result)
 
 
