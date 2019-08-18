@@ -65,7 +65,7 @@ class TestServiceManagement(TestAppBase):
         self.assertEqual(service_name, name)
         return service_id
 
-    def remove_service(self, service_id, service_name, service_file_name):
+    def remove_service(self, service_id, service_name):
         # delete service file
         with self.app.test_client() as client:
             data = dict(
@@ -75,7 +75,7 @@ class TestServiceManagement(TestAppBase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.get_json()['status'], 'success')
         # check service file and folder is removed unser final_path
-        self.assertFalse(os.path.isfile(os.path.join(service_dir, service_name, service_file_name)))
+        self.assertFalse(os.path.isfile(os.path.join(service_dir, service_name, service_name + '.py')))
         # check models.txt is updated
         self.assertEqual([], ServiceModelsManager.get_models())
         # check database
@@ -101,32 +101,33 @@ class TestServiceManagement(TestAppBase):
             )
             response = client.post('/services/update', data=data, follow_redirects=False)
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.get_json()['status'], 'success')
         # check backup service file is removed under temp_path
         self.assertFalse(os.path.isfile(os.path.join(service_dir, 'temp', service_file_name)))
         # check service file and folder still exist under final path
         self.assertTrue(os.path.isdir(os.path.join(service_dir, service_name)))
         self.assertTrue(os.path.isfile(os.path.join(service_dir, service_name, service_name + '.py')))
+        return response
 
     def test_add_and_delete_service_file(self):
         service_name = 'TelnetService'
         service_file_name = service_name + '.py'
         service_id = self.add_service(service_name, service_file_name)
-        self.remove_service(service_id, service_name, service_file_name)
+        self.remove_service(service_id, service_name)
 
     def test_add_and_delete_service_container(self):
         service_name = 'TelnetService'
         service_file_name = service_name + '.zip'
         service_id = self.add_service(service_name, service_file_name)
-        self.remove_service(service_id, service_name, service_file_name)
+        self.remove_service(service_id, service_name)
 
     def test_update_with_valid_service_file(self):
         service_name = 'TelnetService'
         service_file_name = service_name + '.py'
         # add a new discription column
-        modified_service_file_namae = 'ModifiedService/TelnetService.py'
+        modified_service_file_namae = 'ModifiedTelnetService/TelnetService.py'
         service_id = self.add_service(service_name, service_file_name)
-        self.update_service(service_id, service_name, modified_service_file_namae)
+        response = self.update_service(service_id, service_name, modified_service_file_namae)
+        self.assertEqual(response.get_json()['status'], 'success')
         # check on metadata
         from database import Base
         has_table = False
@@ -136,7 +137,20 @@ class TestServiceManagement(TestAppBase):
                 self.assertTrue('description' in table.columns.keys())
                 break
         self.assertTrue(has_table)
-        self.remove_service(service_id, service_name, service_file_name)
+        self.remove_service(service_id, service_name)
+
+    def test_update_with_invalid_service_file(self):
+        service_name = 'TelnetService'
+        service_file_name = service_name + '.py'
+        # try to update an invalid service file
+        modified_service_file_name = 'EmptyTelnetService/TelnetService.py'
+        service_id = self.add_service(service_name, service_file_name)
+        response = self.update_service(service_id, service_name, modified_service_file_name)
+        # check the service file doesn't change
+        self.assertTrue(filecmp.cmp(os.path.join(service_dir, service_name, service_name + '.py'),
+                        os.path.join(test_dir, 'testFiles', service_file_name)))
+        self.assertEqual(response.get_json()['status'], 'error')
+        self.remove_service(service_id, service_name)
 
 
 if __name__ == '__main__':
