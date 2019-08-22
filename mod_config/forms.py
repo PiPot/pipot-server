@@ -44,6 +44,7 @@ def simple_service_file_validation(check_service=False):
 
 def simple_notification_file_validation(check_notification=True):
     def validate_file(form, field):
+        field.data.filename = os.path.basename(field.data.filename)
         file_type = is_python_or_container(field.data.filename)
         if file_type == FileType.PYTHONFILE:
             # Name cannot be one of the files we already have

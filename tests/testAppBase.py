@@ -70,15 +70,17 @@ class TestAppBase(unittest.TestCase):
 
     def create_admin(self):
         # test if there is admin existed
-        name, password, email = "admin", "adminpwd", "admin@email.com"
-        db = create_session(self.app.config['DATABASE_URI'], drop_tables=False)
-        role = Role(name=name)
-        db.add(role)
-        db.commit()
-        admin_user = User(role_id=role.id, name=name, password=password, email=email)
-        db.add(admin_user)
-        db.commit()
-        db.remove()
+        try:
+            name, password, email = "admin", "adminpwd", "admin@email.com"
+            db = create_session(self.app.config['DATABASE_URI'], drop_tables=False)
+            role = Role(name=name)
+            db.add(role)
+            db.commit()
+            admin_user = User(role_id=role.id, name=name, password=password, email=email)
+            db.add(admin_user)
+            db.commit()
+        finally:
+            db.remove()
         return name, password, email
 
     def setUp(self):
@@ -89,10 +91,12 @@ class TestAppBase(unittest.TestCase):
 
     def tearDown(self):
         from database import Base
-        db = create_session(self.app.config['DATABASE_URI'], drop_tables=False)
-        db_engine = create_engine(self.app.config['DATABASE_URI'], convert_unicode=True)
-        Base.metadata.drop_all(bind=db_engine)
-        db.remove()
+        try:
+            db = create_session(self.app.config['DATABASE_URI'], drop_tables=False)
+            db_engine = create_engine(self.app.config['DATABASE_URI'], convert_unicode=True)
+            Base.metadata.drop_all(bind=db_engine)
+        finally:
+            db.remove()
 
 
 class TestApp(TestAppBase):

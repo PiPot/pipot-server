@@ -143,7 +143,7 @@ def notifications():
                         # Delayed insert, show message for delay
                         form.errors['file'] = [
                             'The file was submitted, but dependencies need '
-                            'to be installed. It will be listed as soon as '
+                            'to be installed. It will be listed after refreshing the page if'
                             'said dependencies are installed.'
                         ]
                 except NotificationLoader.NotificationLoaderException as e:
