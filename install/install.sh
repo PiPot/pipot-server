@@ -22,7 +22,7 @@ echo "* Installing nginx, python & pip      "
 apt-get -q -y install virtualenv dnsutils nginx python python-dev python-pip >> "$install_log" 2>&1
 
 if [ $(arch) != arm* ]; then
-    echo "This is not arm machine, install qemu-user-static and binfmt-support for image chroot"  >> "${LOG}" 2>&1
+    echo "This is not arm machine, install qemu-user-static and binfmt-support for image chroot"  >> "$install_log" 2>&1
     apt-get -q -y install qemu qemu-user-static binfmt-support >> "$install_log" 2>&1
 fi
 
