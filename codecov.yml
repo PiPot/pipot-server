@@ -7,3 +7,4 @@ ignore:
   - "install/*"
   - ".idea/"
   - "honeypot_images/*"
+  - "notifications/temp/*"
