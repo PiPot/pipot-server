@@ -12,7 +12,6 @@ install:
   - pip install codecov 
   - sudo ./tests/installTestDb.sh
 script: 
-  - rm .coverage
-  - nose2 --with-coverage
+  - nose2 --with-coverage -i
 after_success:
   - codecov
