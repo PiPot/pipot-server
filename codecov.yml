@@ -7,4 +7,3 @@ ignore:
   - "install/*"
   - ".idea/"
   - "honeypot_images/*"
-  - "pipot/notifications/temp/*"
